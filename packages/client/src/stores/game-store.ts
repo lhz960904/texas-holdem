@@ -37,12 +37,38 @@ interface GameActions {
   initConnection: (playerId: string) => void
   disconnect: () => void
   joinRoom: (code: string, nickname: string, avatar: string) => void
+  tryReconnect: () => boolean
   toggleReady: () => void
   startGame: () => void
   sendAction: (type: string, amount?: number) => void
   showCards: () => void
   leaveRoom: () => void
   clearSettle: () => void
+}
+
+const STORAGE_KEY = 'texas-holdem-session'
+
+interface SessionData {
+  playerId: string
+  roomCode: string
+  nickname: string
+  avatar: string
+}
+
+function saveSession(data: SessionData) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+}
+
+function loadSession(): SessionData | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch { return null }
+}
+
+function clearSession() {
+  localStorage.removeItem(STORAGE_KEY)
 }
 
 const initialState: GameState = {
@@ -76,7 +102,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     // Register all server event handlers
     wsClient.on('room-state', ({ room, hands, myCards }) => {
-      set({ room, hands, myCards: myCards ?? null })
+      // Determine screen based on room status
+      const screen = room.status === 'playing' ? 'game' : 'waiting'
+      set({ room, hands, myCards: myCards ?? null, screen })
     })
 
     wsClient.on('player-joined', ({ player }) => {
@@ -175,6 +203,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     wsClient.on('error', ({ message }) => {
       console.error('[WS Error]', message)
+      // If room not found during reconnect, clear session and go to lobby
+      if (message.includes('not found') || message.includes('Not found')) {
+        clearSession()
+        set({ room: null, screen: 'lobby' })
+      }
     })
 
     wsClient.connect()
@@ -187,8 +220,29 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   },
 
   joinRoom: (code, nickname, avatar) => {
+    const playerId = get().playerId
+    if (playerId) {
+      saveSession({ playerId, roomCode: code, nickname, avatar })
+    }
     get().wsClient?.send('join-room', { code, nickname, avatar })
     set({ screen: 'waiting' })
+  },
+
+  tryReconnect: () => {
+    const session = loadSession()
+    if (!session) return false
+    const { playerId, roomCode, nickname, avatar } = session
+    get().initConnection(playerId)
+    // Wait for WS to connect, then rejoin room
+    setTimeout(() => {
+      useGameStore.getState().wsClient?.send('join-room', {
+        code: roomCode,
+        nickname,
+        avatar,
+      })
+    }, 500)
+    set({ playerId })
+    return true
   },
 
   toggleReady: () => {
@@ -209,6 +263,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
   leaveRoom: () => {
     get().wsClient?.send('leave-room', {})
+    clearSession()
     set({
       room: null,
       myCards: null,

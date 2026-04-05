@@ -96,12 +96,31 @@ export class WsHandler {
       }
       conn.roomId = roomRef.id
 
+      // Mark player as connected
+      player.isConnected = true
+
       const state = this.roomManager.getRoomState(roomRef.id)!
-      this.send(ws, 'room-state', {
-        room: state,
-        hands: [],
-        myCards: undefined,
-      })
+      const engine = this.roomManager.getEngine(roomRef.id)
+
+      // If game is in progress, send current hand cards and game state
+      let myCards: [import('@texas-holdem/shared').Card, import('@texas-holdem/shared').Card] | undefined
+      let hands: import('@texas-holdem/shared').PlayerHandState[] = []
+      if (engine) {
+        myCards = engine.getPlayerCards(player.seatIndex) ?? undefined
+        hands = engine.getAllPlayerHands()
+      }
+
+      this.send(ws, 'room-state', { room: state, hands, myCards })
+
+      // If game in progress, also send current turn info
+      if (engine && state.game && state.game.currentTurn >= 0) {
+        this.send(ws, 'turn', {
+          seatIndex: state.game.currentTurn,
+          deadline: state.game.turnDeadline,
+          minRaise: engine.getMinRaise(),
+          currentBet: engine.getCurrentBet(),
+        })
+      }
 
       this.broadcastToRoom(roomRef.id, 'player-joined', { player }, conn.playerId)
     } catch (err: any) {
