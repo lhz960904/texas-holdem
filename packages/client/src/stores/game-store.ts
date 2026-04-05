@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Card, PlayerHandState, RoomState } from '@texas-holdem/shared'
+import type { Card, GamePhase, PlayerHandState, RoomState } from '@texas-holdem/shared'
 import type { ShowdownResult, SettleWinner } from '@texas-holdem/shared'
 import { WsClient } from '../lib/ws-client'
 
@@ -125,7 +125,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
             ...state.room,
             game: {
               ...state.room.game,
-              phase,
+              phase: phase as GamePhase,
               communityCards,
             },
           },

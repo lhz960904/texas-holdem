@@ -8,5 +8,5 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src"]
 }
