@@ -26,8 +26,11 @@ export class WsHandler {
   constructor(roomManager: RoomManager) {
     this.roomManager = roomManager
     this.wss = new WebSocketServer({ noServer: true })
-    this.wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
-      const playerId = randomUUID()
+    this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+      // Use playerId from query param if provided, otherwise generate one
+      const url = new URL(req.url || '/', `http://${req.headers.host}`)
+      const playerId = url.searchParams.get('playerId') || randomUUID()
+
       const conn: PlayerConnection = { ws, playerId, roomId: null }
       this.connections.set(ws, conn)
       this.playerSockets.set(playerId, ws)
@@ -48,9 +51,6 @@ export class WsHandler {
       ws.on('error', () => {
         this.handleDisconnect(ws, conn)
       })
-
-      // Send the assigned playerId so client knows who they are
-      this.send(ws, 'error', { message: `__init__:${playerId}` })
     })
   }
 
