@@ -104,10 +104,10 @@ export class WsHandler {
 
       // If game is in progress, send current hand cards and game state
       let myCards: [import('@texas-holdem/shared').Card, import('@texas-holdem/shared').Card] | undefined
-      let hands: import('@texas-holdem/shared').PlayerHandState[] = []
+      let hands: { seatIndex: number; bet: number; totalBet: number; hasActed: boolean }[] = []
       if (engine) {
         myCards = engine.getPlayerCards(player.seatIndex) ?? undefined
-        hands = engine.getAllPlayerHands()
+        hands = engine.getPlayerHandStates()
       }
 
       this.send(ws, 'room-state', { room: state, hands, myCards })
