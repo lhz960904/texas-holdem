@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { Application } from 'pixi.js'
 import { useGameStore } from '../stores/game-store'
 import { TableScene, type TableSceneState } from './table-scene'
+import { ActionBar } from '../components/ActionBar'
+import { SettleOverlay } from '../components/SettleOverlay'
 
 export function PokerTable() {
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -100,8 +102,8 @@ export function PokerTable() {
     return () => clearInterval(interval)
   }, [room, myCards, currentTurn, turnDeadline, handsArr, playerId, showdownResults])
 
-  // --- Settle overlay ---
-  const showSettle = settleWinners.length > 0
+  const me = room?.players.find((p) => p.id === playerId)
+  const mySeatIndex = me?.seatIndex ?? 0
 
   return (
     <div
@@ -111,67 +113,12 @@ export function PokerTable() {
       {/* Pixi canvas area — 75% height */}
       <div ref={canvasRef} className="flex-1" style={{ height: '75%' }} />
 
-      {/* ActionBar placeholder — Task 10 will replace this */}
-      <div className="h-[25%] bg-black/90 border-t border-white/[0.08]" />
+      {/* Action bar */}
+      <ActionBar mySeatIndex={mySeatIndex} />
 
       {/* Settle overlay */}
-      {showSettle && (
-        <SettleOverlay
-          winners={settleWinners}
-          players={room?.players ?? []}
-          onClose={() => useGameStore.getState().clearSettle()}
-        />
-      )}
+      {settleWinners.length > 0 && <SettleOverlay />}
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Minimal settle overlay
-// ---------------------------------------------------------------------------
-
-import type { SettleWinner, PlayerInfo } from '@texas-holdem/shared'
-
-interface SettleOverlayProps {
-  winners: SettleWinner[]
-  players: PlayerInfo[]
-  onClose: () => void
-}
-
-function SettleOverlay({ winners, players, onClose }: SettleOverlayProps) {
-  const playerMap = new Map(players.map((p) => [p.seatIndex, p]))
-
-  return (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
-      <div className="bg-gray-900 border border-yellow-500/40 rounded-2xl p-6 min-w-[280px] max-w-[400px] text-center shadow-2xl">
-        <div className="text-yellow-400 text-xl font-bold mb-4">🏆 Round Over</div>
-
-        <div className="space-y-2 mb-6">
-          {winners.map((w, i) => {
-            const player = playerMap.get(w.seatIndex)
-            const name = player?.nickname ?? `Seat ${w.seatIndex}`
-            const avatarParts = (player?.avatar ?? '👤:#888888').split(':')
-            const emojiChar = avatarParts[0]
-            return (
-              <div
-                key={i}
-                className="flex items-center justify-between bg-yellow-500/10 rounded-xl px-4 py-2"
-              >
-                <span className="text-lg">{emojiChar}</span>
-                <span className="text-white font-semibold">{name}</span>
-                <span className="text-yellow-400 font-bold">+${w.amount}</span>
-              </div>
-            )
-          })}
-        </div>
-
-        <button
-          className="w-full py-2 rounded-xl bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition-colors"
-          onClick={onClose}
-        >
-          Continue
-        </button>
-      </div>
-    </div>
-  )
-}
