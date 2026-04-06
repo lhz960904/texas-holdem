@@ -359,92 +359,77 @@ export function PokerTable() {
         </div>
       </div>
 
-      {/* Bottom HUD — compact for mobile */}
-      <div className="flex-shrink-0 bg-[#131313]/90 backdrop-blur-xl border-t border-white/10 px-3 sm:px-6 py-2 sm:pb-4 sm:pt-3">
-        <div className="max-w-5xl mx-auto flex items-center gap-3 sm:gap-6">
-          {/* Left: Avatar + cards */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="relative">
-              <div
-                className="w-10 h-10 sm:w-16 sm:h-16 rounded-full border-2 sm:border-3 border-[#e9c349] flex items-center justify-center text-xl sm:text-3xl"
-                style={{ backgroundColor: myColor }}
-              >
-                {myEmoji}
-              </div>
-              {dealerSeat === mySeatIndex && (
-                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white text-black font-bold text-[7px] sm:text-[9px] flex items-center justify-center">D</div>
-              )}
-            </div>
-            {myCards && (
-              <div className="flex -space-x-3">
-                <div style={{ transform: 'rotate(-4deg)' }}><PlayingCard card={myCards[0]} /></div>
-                <div style={{ transform: 'rotate(4deg)' }}><PlayingCard card={myCards[1]} /></div>
-              </div>
-            )}
-            <div className="hidden sm:block">
-              <div className="text-[9px] text-white/40 uppercase">{me?.nickname}</div>
-              <div className="font-headline font-bold text-[#e9c349] text-sm">{myChips.toLocaleString()}</div>
-            </div>
-            <div className="sm:hidden font-headline font-bold text-[#e9c349] text-xs">{myChips.toLocaleString()}</div>
-          </div>
+      {/* Bottom HUD — single thin row */}
+      <div className="flex-shrink-0 bg-[#131313]/95 border-t border-white/10 px-2 sm:px-4 h-[52px] flex items-center">
+        <div className="w-full max-w-5xl mx-auto flex items-center gap-2 sm:gap-3">
+          {/* Avatar (tiny) */}
+          <div
+            className="w-8 h-8 rounded-full border-2 border-[#e9c349] flex items-center justify-center text-base flex-shrink-0"
+            style={{ backgroundColor: myColor }}
+          >{myEmoji}</div>
 
-          {/* Center: Action buttons — compact */}
-          <div className="flex gap-1.5 sm:gap-2 items-center flex-1 justify-center">
+          {/* My cards (small) */}
+          {myCards && (
+            <div className="flex -space-x-2 flex-shrink-0">
+              <div style={{ transform: 'rotate(-3deg)' }}><PlayingCard card={myCards[0]} small /></div>
+              <div style={{ transform: 'rotate(3deg)' }}><PlayingCard card={myCards[1]} small /></div>
+            </div>
+          )}
+
+          {/* Chips */}
+          <div className="font-headline font-bold text-[#e9c349] text-xs flex-shrink-0">{myChips.toLocaleString()}</div>
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-white/10 flex-shrink-0" />
+
+          {/* Action buttons — compact single row */}
+          <div className="flex gap-1 sm:gap-1.5 items-center flex-1 justify-center">
             <button
               onClick={() => sendAction('fold')}
               disabled={!isMyTurn}
-              className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl bg-[#2a2a2a] text-[#e5e2e1] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
+              className="h-8 px-3 sm:px-4 rounded-lg bg-[#2a2a2a] text-[#e5e2e1]/80 font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
             >Fold</button>
 
             {canCheck ? (
               <button
                 onClick={() => sendAction('check')}
                 disabled={!isMyTurn}
-                className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl border border-[#96d59b] text-[#96d59b] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
+                className="h-8 px-3 sm:px-4 rounded-lg border border-[#96d59b] text-[#96d59b] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
               >Check</button>
             ) : callAmount > 0 ? (
               <button
                 onClick={() => sendAction('call')}
                 disabled={!isMyTurn}
-                className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl border border-[#96d59b] text-[#96d59b] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
-              >Call {callAmount > 0 && <span className="text-[10px] ml-0.5 opacity-70">{callAmount}</span>}</button>
+                className="h-8 px-3 sm:px-4 rounded-lg border border-[#96d59b] text-[#96d59b] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
+              >Call <span className="opacity-70">{callAmount}</span></button>
             ) : null}
 
             <button
               onClick={handleRaise}
               disabled={!isMyTurn || myChips <= callAmount}
-              className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
-            >Raise {effectiveRaise > 0 && <span className="text-[10px] ml-0.5 opacity-70">{effectiveRaise}</span>}</button>
+              className="h-8 px-3 sm:px-4 rounded-lg bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
+            >Raise <span className="opacity-70">{effectiveRaise}</span></button>
 
             <button
               onClick={handleAllIn}
               disabled={!isMyTurn}
-              className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl border border-[#e9c349] text-[#e9c349] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
+              className="h-8 px-3 sm:px-4 rounded-lg border border-[#e9c349] text-[#e9c349] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
             >All In</button>
           </div>
 
-          {/* Right: Raise slider (hidden on small screens) */}
+          {/* Raise slider inline */}
           {isMyTurn && (
-            <div className="hidden sm:flex flex-col gap-1 min-w-[120px] flex-shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0 w-[130px]">
               <input
-                type="range"
-                min={effectiveMinRaise}
-                max={myChips}
-                value={effectiveRaise}
+                type="range" min={effectiveMinRaise} max={myChips} value={effectiveRaise}
                 onChange={(e) => setRaiseAmount(Number(e.target.value))}
-                className="w-full accent-[#e9c349] h-1.5 rounded-full"
+                className="w-full accent-[#e9c349] h-1"
               />
-              <div className="flex gap-1">
-                {[
-                  { label: '½', value: halfPot },
-                  { label: 'Pot', value: fullPot },
-                  { label: 'Max', value: myChips },
-                ].map(({ label, value }) => (
-                  <button
-                    key={label}
-                    onClick={() => setRaiseAmount(value)}
-                    className="flex-1 py-0.5 text-[8px] font-bold rounded bg-white/10 text-white/60 uppercase"
-                  >{label}</button>
+              <div className="flex gap-0.5">
+                {[{ l: '½', v: halfPot }, { l: 'P', v: fullPot }, { l: 'M', v: myChips }].map(({ l, v }) => (
+                  <button key={l} onClick={() => setRaiseAmount(v)}
+                    className="w-6 h-5 text-[7px] font-bold rounded bg-white/10 text-white/50"
+                  >{l}</button>
                 ))}
               </div>
             </div>
