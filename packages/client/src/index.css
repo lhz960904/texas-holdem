@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #e9c349;
+}
+
+body { font-family: 'Inter', sans-serif; }
+
+.font-headline { font-family: 'Manrope', sans-serif; }
+
+.poker-felt {
+  background: radial-gradient(circle at center, #175427 0%, #0d3117 70%, #081d0e 100%);
+}
+
+.card-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -1px rgba(0,0,0,0.3);
+}
+
 html, body {
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;

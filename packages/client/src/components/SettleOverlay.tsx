@@ -39,7 +39,6 @@ export function SettleOverlay() {
   const players = room?.players ?? []
   const playerMap = new Map(players.map((p) => [p.seatIndex, p]))
 
-  // Use first winner for the primary display
   const primaryWinner = settleWinners[0]
   const winnerPlayer = playerMap.get(primaryWinner.seatIndex)
   const winnerEmoji = (winnerPlayer?.avatar ?? '👤:#888888').split(':')[0]
@@ -48,7 +47,6 @@ export function SettleOverlay() {
   const myPlayer = players.find((p) => p.id === playerId)
   const isMe = myPlayer?.seatIndex === primaryWinner.seatIndex
 
-  // Find showdown result for winner
   const winnerShowdown = showdownResults.find((r) => r.seatIndex === primaryWinner.seatIndex)
   const handRankLabel = winnerShowdown?.handName
     ? HAND_RANK_NAMES[winnerShowdown.handName] ?? winnerShowdown.handName
@@ -58,20 +56,20 @@ export function SettleOverlay() {
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
-      <div className="bg-gray-900 border border-yellow-500/40 rounded-2xl p-6 min-w-[280px] max-w-[360px] text-center shadow-2xl">
+      <div className="bg-[#1c1b1b] border border-[#e9c349]/40 rounded-2xl p-6 min-w-[280px] max-w-[360px] text-center shadow-2xl">
         {/* Header */}
-        <div className="text-yellow-400 text-sm font-semibold mb-3">🏆 本局赢家</div>
+        <div className="text-[#e9c349] text-sm font-headline font-bold mb-3">🏆 WINNER</div>
 
         {/* Winner avatar */}
         <div className="text-4xl mb-2">{winnerEmoji}</div>
 
         {/* Winner name */}
-        <div className="text-yellow-400 text-xl font-bold mb-2">{winnerName}</div>
+        <div className="text-[#e9c349] text-xl font-headline font-bold mb-2">{winnerName}</div>
 
         {/* Hand rank + cards (showdown) */}
         {settleShowCards && winnerShowdown && (
           <div className="mb-3">
-            <div className="text-green-400 text-sm font-semibold mb-2">{handRankLabel}</div>
+            <div className="text-[#96d59b] text-sm font-semibold mb-2">{handRankLabel}</div>
             <div className="flex justify-center gap-2">
               {winnerShowdown.cards.map((card, i) => {
                 const isRed = RED_SUITS.has(card.suit)
@@ -79,7 +77,7 @@ export function SettleOverlay() {
                 return (
                   <div
                     key={i}
-                    className={`w-10 h-14 rounded-lg bg-white border border-gray-200 flex flex-col items-center justify-center shadow ${isRed ? 'text-red-500' : 'text-gray-900'}`}
+                    className={`w-10 h-14 rounded-lg bg-[#e5e2e1] border border-[#2a2a2a] flex flex-col items-center justify-center shadow ${isRed ? 'text-red-500' : 'text-[#131313]'}`}
                   >
                     <span className="text-sm font-bold leading-none">{card.rank}</span>
                     <span className="text-base leading-none">{suitSymbol}</span>
@@ -100,8 +98,8 @@ export function SettleOverlay() {
               return (
                 <div key={i} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-1 text-sm">
                   <span>{emoji}</span>
-                  <span className="text-white/80">{name}</span>
-                  <span className="text-yellow-400">+{w.amount.toLocaleString()}</span>
+                  <span className="text-[#e5e2e1]">{name}</span>
+                  <span className="text-[#e9c349]">+{w.amount.toLocaleString()}</span>
                 </div>
               )
             })}
@@ -109,23 +107,23 @@ export function SettleOverlay() {
         )}
 
         {/* Win amount */}
-        <div className="text-yellow-400 text-2xl font-bold mb-4">
+        <div className="text-[#e9c349] text-2xl font-headline font-bold mb-4">
           +{primaryWinner.amount.toLocaleString()}
         </div>
 
-        {/* 亮牌 button */}
+        {/* Show cards button */}
         {showRevealButton && (
           <button
             onClick={showCards}
-            className="w-full py-2 mb-3 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-white/20 transition-colors border border-white/20"
+            className="w-full py-2 mb-3 rounded-xl bg-white/10 text-[#e5e2e1] font-semibold text-sm hover:bg-white/20 transition-colors border border-white/20"
           >
-            亮牌
+            Show Cards
           </button>
         )}
 
         {/* Countdown */}
         <div className="text-white/40 text-xs">
-          下一局 ({countdown}s)
+          Next hand ({countdown}s)
         </div>
       </div>
     </div>

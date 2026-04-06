@@ -11,71 +11,64 @@ const RED_SUITS = new Set(['hearts', 'diamonds'])
 
 interface PlayingCardProps {
   card: Card | null // null = face down
-  small?: boolean // true for small cards on player nodes
+  small?: boolean
+  large?: boolean // for bottom HUD own hand
   className?: string
-  animationDelay?: number // ms delay for staggered deal animation
+  animationDelay?: number
 }
 
-export function PlayingCard({ card, small, className = '', animationDelay = 0 }: PlayingCardProps) {
-  const sizeClass = small ? 'w-8 h-11 text-[10px]' : 'w-11 h-16 text-sm'
+export function PlayingCard({ card, small, large, className = '', animationDelay = 0 }: PlayingCardProps) {
+  const sizeClass = large
+    ? 'w-20 h-28 rounded-xl p-3'
+    : small
+      ? 'w-12 h-[68px] rounded-lg'
+      : 'w-16 h-24 rounded-lg'
 
   if (!card) {
-    // Face down — deep blue gradient with diamond pattern overlay
+    // Face down
     return (
       <div
         data-testid="card"
-        className={`${sizeClass} rounded-[6px] flex items-center justify-center select-none relative overflow-hidden ${className}`}
+        className={`${sizeClass} card-shadow bg-[#2a2a2a] border-2 border-[#e9c349]/20 flex items-center justify-center relative overflow-hidden select-none ${className}`}
         style={{
-          background: 'linear-gradient(135deg, #1a3a6b 0%, #0f2248 50%, #1a3a6b 100%)',
-          border: '1px solid rgba(100,150,255,0.25)',
-          boxShadow: '2px 3px 10px rgba(0,0,0,0.5), inset 0 0 15px rgba(100,150,255,0.08)',
           animation: animationDelay > 0 ? `dealIn 0.35s ease-out ${animationDelay}ms both` : undefined,
         }}
       >
-        {/* Diamond pattern overlay */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `
-              linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%),
-              linear-gradient(-45deg, rgba(255,255,255,0.04) 25%, transparent 25%),
-              linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.04) 75%),
-              linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.04) 75%)
-            `,
-            backgroundSize: '8px 8px',
-            backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
-          }}
-        />
-        {/* Center emblem */}
-        <div
-          className="w-[50%] h-[50%] rounded-full relative z-10"
-          style={{
-            border: '1px solid rgba(100,150,255,0.15)',
-            background: 'radial-gradient(circle, rgba(100,150,255,0.1) 0%, transparent 70%)',
-          }}
-        />
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_#e9c349_0%,_transparent_70%)]" />
+        <span className="text-[#e9c349]/30 text-2xl">🔒</span>
       </div>
     )
   }
 
   const isRed = RED_SUITS.has(card.suit)
   const suitSymbol = SUIT_SYMBOLS[card.suit] ?? card.suit
-  const textColor = isRed ? '#dc2626' : '#1a1a2e'
+  const colorClass = isRed ? 'text-red-500' : 'text-[#131313]'
+
+  const rankSize = large ? 'text-2xl' : small ? 'text-sm' : 'text-lg'
+  const suitSize = large ? 'text-2xl' : small ? 'text-sm' : 'text-lg'
+  const centerSuitSize = large ? 'text-5xl' : small ? 'text-2xl' : 'text-4xl'
 
   return (
     <div
       data-testid="card"
-      className={`${sizeClass} rounded-[6px] flex flex-col items-center justify-center select-none relative ${className}`}
+      className={`${sizeClass} flex flex-col justify-between p-2 card-shadow bg-[#e5e2e1] select-none ${className}`}
       style={{
-        background: 'linear-gradient(145deg, #fff, #f8f8f8)',
-        border: '1px solid rgba(0,0,0,0.12)',
-        boxShadow: '2px 3px 10px rgba(0,0,0,0.5)',
-        color: textColor,
         animation: animationDelay > 0 ? `dealIn 0.35s ease-out ${animationDelay}ms both` : 'dealIn 0.35s ease-out',
       }}
     >
-      <span className="font-bold leading-none">{card.rank}</span>
-      <span className="leading-none">{suitSymbol}</span>
+      <div className="flex flex-col items-start leading-none">
+        <span className={`font-bold ${colorClass} ${rankSize}`}>
+          {card.rank}
+        </span>
+        <span className={`${colorClass} ${suitSize}`}>
+          {suitSymbol}
+        </span>
+      </div>
+      <div className="self-center">
+        <span className={`${colorClass} ${centerSuitSize}`}>
+          {suitSymbol}
+        </span>
+      </div>
     </div>
   )
 }
