@@ -367,26 +367,18 @@ export class GameEngine {
     const sidePots = calculateSidePots(betInfos)
     this.state.sidePots = sidePots
 
-    // When only 1 non-folded player remains, give them all pot(s) directly
+    // Total pot = sum of all side pots (which are calculated from totalBet)
+    const totalPot = sidePots.reduce((sum, p) => sum + p.amount, 0)
+
+    // When only 1 non-folded player remains, give them everything
     if (!showdown) {
       const winner = nonFolded[0]
       const winners: SettleResult['winners'] = []
-      for (let potIdx = 0; potIdx < sidePots.length; potIdx++) {
-        const pot = sidePots[potIdx]
-        if (winner && pot.eligible.includes(winner.seatIndex)) {
-          winner.chips += pot.amount
-          winners.push({ seatIndex: winner.seatIndex, amount: pot.amount, potIndex: potIdx })
-        } else if (winner) {
-          // give them everything regardless (everyone else folded)
-          winner.chips += pot.amount
-          winners.push({ seatIndex: winner.seatIndex, amount: pot.amount, potIndex: potIdx })
-        }
+      if (winner) {
+        winner.chips += totalPot
+        winners.push({ seatIndex: winner.seatIndex, amount: totalPot, potIndex: 0 })
       }
-      // Also add back any uncollected pot (bets already collected into state.pot)
-      if (sidePots.length === 0 && winner) {
-        winner.chips += this.state.pot
-        winners.push({ seatIndex: winner.seatIndex, amount: this.state.pot, potIndex: 0 })
-      }
+      this.state.pot = 0
       this.state.phase = 'settle'
       return { winners, showdown: false }
     }
@@ -449,6 +441,7 @@ export class GameEngine {
       }
     }
 
+    this.state.pot = 0
     this.state.phase = 'settle'
 
     const result: SettleResult = { winners, showdown }

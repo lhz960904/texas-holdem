@@ -182,14 +182,32 @@ export class RoomManager {
     if (room.players.size < 2) throw new Error('Need at least 2 players')
 
     room.status = 'playing'
-    room.engine = new GameEngine(room.config.blinds.small, room.config.blinds.big)
 
-    for (const player of room.players.values()) {
-      room.engine.addPlayer(player.seatIndex, player.id, player.chips)
+    // Determine next dealer seat
+    let dealerSeat: number
+    const seats = [...room.players.values()].map(p => p.seatIndex).sort((a, b) => a - b)
+
+    if (room.engine) {
+      // Subsequent hand — move dealer, reuse engine with updated chips
+      const prevDealer = room.engine.getState().dealerSeat
+      const prevIdx = seats.indexOf(prevDealer)
+      dealerSeat = seats[(prevIdx + 1) % seats.length]
+
+      // Re-add players with current chip counts
+      for (const player of room.players.values()) {
+        room.engine.removePlayer(player.seatIndex)
+        room.engine.addPlayer(player.seatIndex, player.id, player.chips)
+      }
+    } else {
+      // First hand — create new engine
+      room.engine = new GameEngine(room.config.blinds.small, room.config.blinds.big)
+      for (const player of room.players.values()) {
+        room.engine.addPlayer(player.seatIndex, player.id, player.chips)
+      }
+      dealerSeat = seats[0]
     }
 
-    const firstSeat = [...room.players.values()][0].seatIndex
-    room.engine.startHand(firstSeat)
+    room.engine.startHand(dealerSeat)
   }
 
   getEngine(roomId: string): GameEngine | null {

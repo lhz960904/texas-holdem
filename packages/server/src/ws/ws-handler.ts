@@ -144,6 +144,16 @@ export class WsHandler {
         room: state,
         hands: [],
       })
+
+      // Auto-start when all players are ready (≥2 players)
+      const room = this.roomManager.getRoom(conn.roomId)
+      if (room && room.players.size >= 2 && room.status === 'waiting') {
+        const allReady = [...room.players.values()].every(p => p.isReady)
+        if (allReady) {
+          // Start game automatically
+          this.doStartGame(conn.roomId, room.hostId)
+        }
+      }
     } catch (err: any) {
       this.send(ws, 'error', { message: err.message ?? 'Failed to toggle ready' })
     }
@@ -155,42 +165,41 @@ export class WsHandler {
       return
     }
     try {
-      this.roomManager.startGame(conn.roomId, conn.playerId)
-
-      const room = this.roomManager.getRoom(conn.roomId)!
-      const engine = this.roomManager.getEngine(conn.roomId)!
-      const gameState = engine.getState()
-
-      // Broadcast game-start to all
-      this.broadcastToRoom(conn.roomId, 'game-start', {
-        dealerSeat: gameState.dealerSeat,
-        blinds: { small: room.config.blinds.small, big: room.config.blinds.big },
-      })
-
-      // Send private deal-cards to each player
-      for (const player of room.players.values()) {
-        const playerWs = this.playerSockets.get(player.id)
-        if (playerWs) {
-          const cards = engine.getPlayerCards(player.seatIndex)
-          if (cards) {
-            this.send(playerWs, 'deal-cards', { cards })
-          }
-        }
-      }
-
-      // Broadcast turn info
-      if (gameState.currentTurn >= 0) {
-        this.broadcastToRoom(conn.roomId, 'turn', {
-          seatIndex: gameState.currentTurn,
-          deadline: gameState.turnDeadline,
-          minRaise: engine.getMinRaise(),
-          currentBet: engine.getCurrentBet(),
-          hands: engine.getPlayerHandStates(),
-        })
-        this.startTurnTimer(conn.roomId, gameState.currentTurn, room.config.turnTime)
-      }
+      this.doStartGame(conn.roomId, conn.playerId)
     } catch (err: any) {
       this.send(ws, 'error', { message: err.message ?? 'Failed to start game' })
+    }
+  }
+
+  private doStartGame(roomId: string, requesterId: string): void {
+    this.roomManager.startGame(roomId, requesterId)
+
+    const room = this.roomManager.getRoom(roomId)!
+    const engine = this.roomManager.getEngine(roomId)!
+    const gameState = engine.getState()
+
+    this.broadcastToRoom(roomId, 'game-start', {
+      dealerSeat: gameState.dealerSeat,
+      blinds: { small: room.config.blinds.small, big: room.config.blinds.big },
+    })
+
+    for (const player of room.players.values()) {
+      const playerWs = this.playerSockets.get(player.id)
+      if (playerWs) {
+        const cards = engine.getPlayerCards(player.seatIndex)
+        if (cards) this.send(playerWs, 'deal-cards', { cards })
+      }
+    }
+
+    if (gameState.currentTurn >= 0) {
+      this.broadcastToRoom(roomId, 'turn', {
+        seatIndex: gameState.currentTurn,
+        deadline: gameState.turnDeadline,
+        minRaise: engine.getMinRaise(),
+        currentBet: engine.getCurrentBet(),
+        hands: engine.getPlayerHandStates(),
+      })
+      this.startTurnTimer(roomId, gameState.currentTurn, room.config.turnTime)
     }
   }
 
