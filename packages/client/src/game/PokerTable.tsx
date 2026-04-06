@@ -8,48 +8,50 @@ import type { Card } from '@texas-holdem/shared'
 
 // Opponent seat positions (self is NOT on the table)
 // Positions are CSS percentages for absolute placement on the table container
+// Opponent positions — symmetrical around the table
+// Self is at bottom center (not rendered here), opponents go clockwise from bottom-left
 const OPPONENT_POSITIONS: Record<number, { top: string; left: string }[]> = {
   1: [
-    { top: '8%', left: '50%' },
+    { top: '8%', left: '50%' },         // top center
   ],
   2: [
-    { top: '15%', left: '25%' },
-    { top: '15%', left: '75%' },
+    { top: '12%', left: '25%' },        // top-left
+    { top: '12%', left: '75%' },        // top-right
   ],
   3: [
-    { top: '15%', left: '20%' },
-    { top: '8%', left: '50%' },
-    { top: '15%', left: '80%' },
+    { top: '12%', left: '20%' },        // top-left
+    { top: '8%', left: '50%' },         // top center
+    { top: '12%', left: '80%' },        // top-right
   ],
   4: [
-    { top: '45%', left: '5%' },
-    { top: '8%', left: '30%' },
-    { top: '8%', left: '70%' },
-    { top: '45%', left: '95%' },
+    { top: '65%', left: '8%' },         // bottom-left
+    { top: '10%', left: '30%' },        // top-left
+    { top: '10%', left: '70%' },        // top-right
+    { top: '65%', left: '92%' },        // bottom-right
   ],
   5: [
-    { top: '50%', left: '5%' },
-    { top: '12%', left: '15%' },
-    { top: '8%', left: '50%' },
-    { top: '12%', left: '85%' },
-    { top: '50%', left: '95%' },
+    { top: '70%', left: '8%' },         // bottom-left
+    { top: '15%', left: '15%' },        // top-left
+    { top: '8%', left: '50%' },         // top center
+    { top: '15%', left: '85%' },        // top-right
+    { top: '70%', left: '92%' },        // bottom-right
   ],
   6: [
-    { top: '55%', left: '5%' },
-    { top: '20%', left: '10%' },
-    { top: '8%', left: '40%' },
-    { top: '8%', left: '60%' },
-    { top: '20%', left: '90%' },
-    { top: '55%', left: '95%' },
+    { top: '72%', left: '8%' },         // bottom-left
+    { top: '22%', left: '8%' },         // left
+    { top: '8%', left: '35%' },         // top-left
+    { top: '8%', left: '65%' },         // top-right
+    { top: '22%', left: '92%' },        // right
+    { top: '72%', left: '92%' },        // bottom-right
   ],
   7: [
-    { top: '60%', left: '5%' },
-    { top: '30%', left: '5%' },
-    { top: '8%', left: '25%' },
-    { top: '8%', left: '50%' },
-    { top: '8%', left: '75%' },
-    { top: '30%', left: '95%' },
-    { top: '60%', left: '95%' },
+    { top: '75%', left: '8%' },         // bottom-left
+    { top: '35%', left: '5%' },         // mid-left
+    { top: '8%', left: '25%' },         // top-left
+    { top: '8%', left: '50%' },         // top center
+    { top: '8%', left: '75%' },         // top-right
+    { top: '35%', left: '95%' },        // mid-right
+    { top: '75%', left: '92%' },        // bottom-right
   ],
 }
 
@@ -71,7 +73,7 @@ function getOpponentPositions(
 }
 
 // Self position for bet chip calculation (bottom center, off-table)
-const SELF_POSITION = { top: '95%', left: '50%' }
+const SELF_POSITION = { top: '110%', left: '50%' }
 
 // Calculate bet chip position: lerp from player toward center
 function getBetPosition(playerPos: { top: string; left: string }): { top: string; left: string } {
@@ -241,72 +243,64 @@ export function PokerTable() {
             <div className="absolute inset-0 border-[3px] border-primary/40 rounded-[190px] pointer-events-none z-10" />
             {/* Felt surface */}
             <div className="absolute inset-0 poker-felt">
-              {/* Pot / Winner display — above community cards, highest z */}
-              <div className="absolute top-[25%] left-1/2 -translate-x-1/2 z-30">
-                {settleWinners.length > 0 && winnerPlayer ? (
-                  /* Winner banner — replaces POT, no overlay */
-                  <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-5 py-2 rounded-full border border-[#e9c349]/40 animate-[winGlow_1.5s_ease-in-out_2]">
-                    <span className="text-2xl">{winnerEmoji}</span>
-                    <div className="flex flex-col items-start">
-                      <span className="font-headline font-extrabold text-lg text-[#e9c349] leading-tight">
-                        {winnerPlayer.nickname} wins!
-                      </span>
-                      <span className="text-[#96d59b] text-sm font-bold leading-tight">
-                        +{winAmount.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                ) : pot > 0 ? (
-                  <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-5 py-1.5 rounded-full border border-[#e9c349]/20">
-                    <span className="font-headline font-extrabold text-xl text-[#e9c349] tracking-tighter">
-                      POT: {pot.toLocaleString()}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
               {/* Community cards — always show 5 slots, undealt as face-down */}
-              <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1 sm:gap-2 z-20 scale-[0.7] sm:scale-100 origin-center">
-                {Array.from({ length: 5 }).map((_, i) => {
-                  const card = communityCards[i] ?? null
-                  const isDealt = i < communityCards.length
-                  return (
-                    <div
-                      key={i}
-                      className="card-flip-container"
-                      style={{ perspective: '600px' }}
-                    >
-                      <div
-                        className={`card-flip-inner ${isDealt ? 'flipped' : ''}`}
-                        style={{
-                          transition: 'transform 0.5s ease',
-                          transitionDelay: isDealt ? `${i * 100}ms` : '0ms',
-                          transformStyle: 'preserve-3d',
-                          transform: isDealt ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                        }}
-                      >
-                        {/* Back face (default visible) */}
-                        <div style={{ backfaceVisibility: 'hidden', position: 'absolute', inset: 0 }}>
-                          <PlayingCard card={null} />
-                        </div>
-                        {/* Front face (visible when flipped) */}
-                        <div style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                          {isDealt ? <PlayingCard card={card} /> : <PlayingCard card={null} />}
-                        </div>
+              <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 scale-[0.7] sm:scale-100 origin-center flex flex-col items-center gap-1">
+                {/* Pot / Winner display — above community cards, highest z */}
+                <div>
+                  {settleWinners.length > 0 && winnerPlayer ? (
+                    /* Winner banner — replaces POT, no overlay */
+                    <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-5 py-1.5 rounded-full border border-[#e9c349]/40 animate-[winGlow_1.5s_ease-in-out_2]">
+                      <span className="text-xl">{winnerEmoji}</span>
+                      <div className="flex items-start gap-1">
+                        <span className="font-headline font-extrabold text-sm text-[#e9c349] leading-tight">
+                          {winnerPlayer.nickname} wins!
+                        </span>
+                        <span className="text-[#96d59b] text-sm font-bold leading-tight">
+                          +{winAmount.toLocaleString()}
+                        </span>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-
-              {/* Phase label */}
-              {phase && phase !== 'waiting' && (
-                <div className="absolute top-[62%] left-1/2 -translate-x-1/2 z-10">
-                  <span className="text-[10px] uppercase font-medium text-white/35 tracking-[0.15em]">
-                    {phase}
-                  </span>
+                  ) : pot > 0 ? (
+                    <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-5 py-1.5 rounded-full border border-[#e9c349]/20">
+                      <span className="font-headline font-extrabold text-sm text-[#e9c349] tracking-tighter">
+                        POT : ${pot.toLocaleString()}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
-              )}
+                <div className='flex gap-1 sm:gap-2'>
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const card = communityCards[i] ?? null
+                    const isDealt = i < communityCards.length
+                    return (
+                      <div
+                        key={i}
+                        className="card-flip-container"
+                        style={{ perspective: '600px' }}
+                      >
+                        <div
+                          className={`card-flip-inner ${isDealt ? 'flipped' : ''}`}
+                          style={{
+                            transition: 'transform 0.5s ease',
+                            transitionDelay: isDealt ? `${i * 100}ms` : '0ms',
+                            transformStyle: 'preserve-3d',
+                            transform: isDealt ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                          }}
+                        >
+                          {/* Back face (default visible) */}
+                          <div style={{ backfaceVisibility: 'hidden', position: 'absolute', inset: 0 }}>
+                            <PlayingCard card={null} />
+                          </div>
+                          {/* Front face (visible when flipped) */}
+                          <div style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                            {isDealt ? <PlayingCard card={card} /> : <PlayingCard card={null} />}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
