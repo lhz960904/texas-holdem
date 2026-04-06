@@ -229,9 +229,9 @@ export function PokerTable() {
             <div className="absolute inset-0 border-[3px] border-primary/40 rounded-[190px] pointer-events-none z-10" />
             {/* Felt surface */}
             <div className="absolute inset-0 poker-felt">
-              {/* Pot display */}
+              {/* Pot display — above community cards */}
               {pot > 0 && (
-                <div className="absolute top-[36%] left-1/2 -translate-x-1/2 z-10">
+                <div className="absolute top-[30%] left-1/2 -translate-x-1/2 z-10">
                   <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-5 py-2 rounded-full border border-[#e9c349]/20">
                     <span className="font-headline font-extrabold text-2xl text-[#e9c349] tracking-tighter">
                       POT: {pot.toLocaleString()}
@@ -240,18 +240,35 @@ export function PokerTable() {
                 </div>
               )}
 
-              {/* Community cards */}
-              <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2 z-10">
+              {/* Community cards — always show 5 slots, undealt as face-down */}
+              <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2 z-10">
                 {Array.from({ length: 5 }).map((_, i) => {
                   const card = communityCards[i] ?? null
                   const isDealt = i < communityCards.length
                   return (
-                    <div key={i}>
-                      {isDealt ? (
-                        <PlayingCard card={card} animationDelay={i * 80} />
-                      ) : (
-                        <div className="w-16 h-24 rounded-lg border border-white/8 bg-white/3" />
-                      )}
+                    <div
+                      key={i}
+                      className="card-flip-container"
+                      style={{ perspective: '600px' }}
+                    >
+                      <div
+                        className={`card-flip-inner ${isDealt ? 'flipped' : ''}`}
+                        style={{
+                          transition: 'transform 0.5s ease',
+                          transitionDelay: isDealt ? `${i * 100}ms` : '0ms',
+                          transformStyle: 'preserve-3d',
+                          transform: isDealt ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                        }}
+                      >
+                        {/* Back face (default visible) */}
+                        <div style={{ backfaceVisibility: 'hidden', position: 'absolute', inset: 0 }}>
+                          <PlayingCard card={null} />
+                        </div>
+                        {/* Front face (visible when flipped) */}
+                        <div style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                          {isDealt ? <PlayingCard card={card} /> : <PlayingCard card={null} />}
+                        </div>
+                      </div>
                     </div>
                   )
                 })}
