@@ -8,6 +8,7 @@ export class WsClient {
   private playerId: string
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private pendingMessages: string[] = []
+  private hasConnectedBefore = false
 
   constructor(playerId: string) {
     this.playerId = playerId
@@ -23,6 +24,20 @@ export class WsClient {
         this.ws?.send(msg)
       }
       this.pendingMessages = []
+      // On reconnect (not first connect), re-join room from session
+      if (this.hasConnectedBefore) {
+        const raw = localStorage.getItem('texas-holdem-session')
+        if (raw) {
+          try {
+            const session = JSON.parse(raw)
+            this.ws?.send(JSON.stringify({
+              event: 'join-room',
+              data: { code: session.roomCode, nickname: session.nickname, avatar: session.avatar },
+            }))
+          } catch {}
+        }
+      }
+      this.hasConnectedBefore = true
     }
     this.ws.onmessage = (event) => {
       const msg: WSMessage = JSON.parse(event.data)

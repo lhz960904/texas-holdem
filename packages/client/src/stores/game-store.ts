@@ -287,10 +287,13 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     wsClient.on('error', ({ message }) => {
       console.error('[WS Error]', message)
-      // If room not found during reconnect, clear session and go to lobby
-      if (message.includes('not found') || message.includes('Not found')) {
+      // Only clear session if room truly doesn't exist
+      if (message === 'Room not found') {
         clearSession()
-        set({ room: null, screen: 'lobby' })
+        // Only go to lobby if we don't already have a room loaded
+        if (!get().room) {
+          set({ screen: 'lobby' })
+        }
       }
     })
 
