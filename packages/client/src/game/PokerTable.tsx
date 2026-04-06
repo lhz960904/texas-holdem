@@ -577,12 +577,12 @@ export function PokerTable() {
 
                   {/* Raise panel — pops up above the button */}
                   {raiseOpen && isMyTurn && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#1a1a1a] border border-[#333] rounded-xl p-3 shadow-2xl min-w-[200px] z-50">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#1a1a1a] border border-[#333] rounded-xl p-3 shadow-2xl min-w-[200px] z-50 touch-none">
                       {/* Slider */}
                       <input
                         type="range" min={effectiveMinRaise} max={maxRaiseBet} value={effectiveRaise}
                         onChange={(e) => setRaiseAmount(Number(e.target.value))}
-                        className="w-full accent-[#e9c349] h-2 mb-2"
+                        className="w-full accent-[#e9c349] h-2 mb-2 touch-pan-x"
                       />
                       {/* Amount display */}
                       <p className="text-center text-[#e9c349] font-mono font-bold text-sm mb-2">{effectiveRaise.toLocaleString()}</p>
