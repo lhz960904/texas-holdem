@@ -130,8 +130,11 @@ export function PokerTable() {
   const betAnimTimeouts = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
   const [raiseAmount, setRaiseAmount] = useState(minRaise)
 
-  // Request fullscreen + lock landscape on game enter
+  // Request fullscreen + lock landscape on mobile only
   useEffect(() => {
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    if (!isMobile) return
+
     const el = document.documentElement
     const requestFS = el.requestFullscreen
       ?? (el as any).webkitRequestFullscreen
@@ -142,13 +145,12 @@ export function PokerTable() {
     try {
       ;(screen.orientation as any)?.lock?.('landscape').catch(() => {})
     } catch {}
-    // Fallback: request fullscreen on first user tap (required by some browsers)
+    // Fallback: request fullscreen on first user tap
     const onTap = () => {
       if (!document.fullscreenElement) {
         const r = el.requestFullscreen ?? (el as any).webkitRequestFullscreen
         if (r) r.call(el).catch(() => {})
       }
-      document.removeEventListener('click', onTap)
     }
     document.addEventListener('click', onTap, { once: true })
 
