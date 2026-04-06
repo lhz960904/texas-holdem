@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useGameStore } from '../stores/game-store'
 
 const AVATARS = [
@@ -9,6 +9,63 @@ const AVATARS = [
   { emoji: '🐼', color: '#f39c12' },
   { emoji: '🦈', color: '#1abc9c' },
 ]
+
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || (navigator as any).standalone === true
+}
+
+function InstallBanner() {
+  const [show, setShow] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+
+  useEffect(() => {
+    if (isStandalone()) return
+    if (localStorage.getItem('pwa-dismissed')) return
+    setShow(true)
+
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  if (!show) return null
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  const dismiss = () => {
+    setShow(false)
+    localStorage.setItem('pwa-dismissed', '1')
+  }
+
+  const install = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      await deferredPrompt.userChoice
+      setDeferredPrompt(null)
+      dismiss()
+    }
+  }
+
+  return (
+    <div className="fixed bottom-4 left-4 right-4 bg-[#1a1a1a] border border-[#333] rounded-xl p-3 flex items-center gap-3 z-50 shadow-2xl">
+      <div className="flex-1 min-w-0">
+        <p className="text-white text-xs font-bold">添加到主屏幕</p>
+        <p className="text-[#888] text-[10px] mt-0.5">
+          {isIOS
+            ? '点击底部 分享按钮 → "添加到主屏幕"'
+            : '获得全屏体验，告别浏览器地址栏'}
+        </p>
+      </div>
+      {deferredPrompt ? (
+        <button onClick={install} className="px-3 py-1.5 rounded-lg bg-[#d4a843] text-black text-xs font-bold flex-shrink-0">安装</button>
+      ) : null}
+      <button onClick={dismiss} className="text-[#555] text-lg flex-shrink-0">&times;</button>
+    </div>
+  )
+}
 
 export function Login() {
   const [username, setUsername] = useState('')
@@ -115,6 +172,7 @@ export function Login() {
           账户不存在时将自动注册
         </p>
       </form>
+      <InstallBanner />
     </div>
   )
 }
