@@ -233,7 +233,13 @@ export function PokerTable() {
   const handleRaise = () => sendAction('raise', effectiveRaise)
   const handleAllIn = () => sendAction('allIn', myChips)
   const leaveRoom = useGameStore((s) => s.leaveRoom)
+  const toggleReady = useGameStore((s) => s.toggleReady)
+  const startGame = useGameStore((s) => s.startGame)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const isWaiting = room?.status === 'waiting'
+  const isHost = room?.hostId === playerId
+  const amIReady = me?.isReady ?? false
 
   // Parse my avatar
   const myAvatarParts = (me?.avatar ?? '👤:#888888').split(':')
@@ -493,57 +499,81 @@ export function PokerTable() {
           {/* Divider */}
           <div className="w-px h-6 bg-white/10 flex-shrink-0" />
 
-          {/* Action buttons — compact single row */}
-          <div className="flex gap-1 sm:gap-1.5 items-center flex-1 justify-center">
-            <button
-              onClick={() => sendAction('fold')}
-              disabled={!isMyTurn}
-              className="h-8 px-3 sm:px-4 rounded-lg bg-[#2a2a2a] text-[#e5e2e1]/80 font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
-            >Fold</button>
-
-            {canCheck ? (
+          {isWaiting ? (
+            /* Ready / Start controls */
+            <div className="flex gap-2 items-center flex-1 justify-center">
               <button
-                onClick={() => sendAction('check')}
-                disabled={!isMyTurn}
-                className="h-8 px-3 sm:px-4 rounded-lg border border-[#96d59b] text-[#96d59b] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
-              >Check</button>
-            ) : callAmount > 0 ? (
-              <button
-                onClick={() => sendAction('call')}
-                disabled={!isMyTurn}
-                className="h-8 px-3 sm:px-4 rounded-lg border border-[#96d59b] text-[#96d59b] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
-              >Call <span className="opacity-70">{callAmount}</span></button>
-            ) : null}
+                onClick={toggleReady}
+                className={`h-8 px-5 rounded-lg font-headline font-bold text-xs uppercase transition-all ${
+                  amIReady
+                    ? 'bg-[#96d59b] text-[#131313]'
+                    : 'border border-[#96d59b] text-[#96d59b] hover:bg-[#96d59b]/10'
+                }`}
+              >{amIReady ? '✓ Ready' : 'Ready'}</button>
+              {isHost && (
+                <button
+                  onClick={startGame}
+                  className="h-8 px-5 rounded-lg bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-xs uppercase"
+                >Start Game</button>
+              )}
+              <span className="text-[10px] text-white/30">
+                {players.filter(p => p.isReady).length}/{players.length} ready
+              </span>
+            </div>
+          ) : (
+            /* Game action buttons */
+            <>
+              <div className="flex gap-1 sm:gap-1.5 items-center flex-1 justify-center">
+                <button
+                  onClick={() => sendAction('fold')}
+                  disabled={!isMyTurn}
+                  className="h-8 px-3 sm:px-4 rounded-lg bg-[#2a2a2a] text-[#e5e2e1]/80 font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
+                >Fold</button>
 
-            <button
-              onClick={handleRaise}
-              disabled={!isMyTurn || myChips <= callAmount}
-              className="h-8 px-3 sm:px-4 rounded-lg bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
-            >Raise <span className="opacity-70">{effectiveRaise}</span></button>
+                {canCheck ? (
+                  <button
+                    onClick={() => sendAction('check')}
+                    disabled={!isMyTurn}
+                    className="h-8 px-3 sm:px-4 rounded-lg border border-[#96d59b] text-[#96d59b] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
+                  >Check</button>
+                ) : callAmount > 0 ? (
+                  <button
+                    onClick={() => sendAction('call')}
+                    disabled={!isMyTurn}
+                    className="h-8 px-3 sm:px-4 rounded-lg border border-[#96d59b] text-[#96d59b] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
+                  >Call <span className="opacity-70">{callAmount}</span></button>
+                ) : null}
 
-            <button
-              onClick={handleAllIn}
-              disabled={!isMyTurn}
-              className="h-8 px-3 sm:px-4 rounded-lg border border-[#e9c349] text-[#e9c349] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
-            >All In</button>
-          </div>
+                <button
+                  onClick={handleRaise}
+                  disabled={!isMyTurn || myChips <= callAmount}
+                  className="h-8 px-3 sm:px-4 rounded-lg bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
+                >Raise <span className="opacity-70">{effectiveRaise}</span></button>
 
-          {/* Raise slider inline */}
-          {isMyTurn && (
-            <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0 w-[130px]">
-              <input
-                type="range" min={effectiveMinRaise} max={myChips} value={effectiveRaise}
-                onChange={(e) => setRaiseAmount(Number(e.target.value))}
-                className="w-full accent-[#e9c349] h-1"
-              />
-              <div className="flex gap-0.5">
-                {[{ l: '½', v: halfPot }, { l: 'P', v: fullPot }, { l: 'M', v: myChips }].map(({ l, v }) => (
-                  <button key={l} onClick={() => setRaiseAmount(v)}
-                    className="w-6 h-5 text-[7px] font-bold rounded bg-white/10 text-white/50"
-                  >{l}</button>
+                <button
+                  onClick={handleAllIn}
+                  disabled={!isMyTurn}
+                  className="h-8 px-3 sm:px-4 rounded-lg border border-[#e9c349] text-[#e9c349] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
+                >All In</button>
+              </div>
+
+              {isMyTurn && (
+                <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0 w-[130px]">
+                  <input
+                    type="range" min={effectiveMinRaise} max={myChips} value={effectiveRaise}
+                    onChange={(e) => setRaiseAmount(Number(e.target.value))}
+                    className="w-full accent-[#e9c349] h-1"
+                  />
+                  <div className="flex gap-0.5">
+                    {[{ l: '½', v: halfPot }, { l: 'P', v: fullPot }, { l: 'M', v: myChips }].map(({ l, v }) => (
+                      <button key={l} onClick={() => setRaiseAmount(v)}
+                        className="w-6 h-5 text-[7px] font-bold rounded bg-white/10 text-white/50"
+                      >{l}</button>
                 ))}
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>

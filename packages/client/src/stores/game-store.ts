@@ -110,8 +110,18 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     // Register all server event handlers
     wsClient.on('room-state', ({ room, hands, myCards }) => {
-      // Determine screen based on room status
-      const screen = room.status === 'playing' ? 'game' : 'waiting'
+      const currentScreen = get().screen
+      // If we were in game and room goes back to waiting (settle), stay on game screen
+      // so the table shows ready controls instead of jumping to waiting room
+      let screen: Screen
+      if (room.status === 'playing') {
+        screen = 'game'
+      } else if (currentScreen === 'game') {
+        // Post-settle: stay on game screen to show ready button
+        screen = 'game'
+      } else {
+        screen = 'waiting'
+      }
       set({ room, hands, myCards: myCards ?? null, screen })
     })
 
