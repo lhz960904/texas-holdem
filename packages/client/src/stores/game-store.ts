@@ -131,13 +131,30 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       })
     })
 
-    wsClient.on('game-start', () => {
-      set({
-        screen: 'game',
-        showdownResults: [],
-        settleWinners: [],
-        settleShowCards: false,
-        revealedCards: new Map(),
+    wsClient.on('game-start', ({ dealerSeat, blinds }) => {
+      set((state) => {
+        if (!state.room) return {}
+        return {
+          screen: 'game' as Screen,
+          showdownResults: [],
+          settleWinners: [],
+          settleShowCards: false,
+          revealedCards: new Map(),
+          room: {
+            ...state.room,
+            status: 'playing' as const,
+            game: {
+              id: '',
+              phase: 'preflop' as GamePhase,
+              dealerSeat,
+              pot: blinds.small + blinds.big,
+              communityCards: [],
+              currentTurn: -1,
+              turnDeadline: 0,
+              sidePots: [],
+            },
+          },
+        }
       })
     })
 
@@ -162,11 +179,20 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     })
 
     wsClient.on('turn', ({ seatIndex, deadline, minRaise, currentBet }) => {
-      set({
-        currentTurn: seatIndex,
-        turnDeadline: deadline,
-        minRaise,
-        currentBet,
+      set((state) => {
+        const updates: any = {
+          currentTurn: seatIndex,
+          turnDeadline: deadline,
+          minRaise,
+          currentBet,
+        }
+        if (state.room?.game) {
+          updates.room = {
+            ...state.room,
+            game: { ...state.room.game, currentTurn: seatIndex, turnDeadline: deadline },
+          }
+        }
+        return updates
       })
     })
 
