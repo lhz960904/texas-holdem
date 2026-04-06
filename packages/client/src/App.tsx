@@ -6,11 +6,12 @@ import { Lobby } from './components/Lobby'
 const WaitingRoom = lazy(() => import('./components/WaitingRoom').then(m => ({ default: m.WaitingRoom })))
 const PokerTable = lazy(() => import('./game/PokerTable').then(m => ({ default: m.PokerTable })))
 
-function LoadingScreen() {
+function LoadingScreen({ hint }: { hint?: string }) {
   return (
     <div className="h-dvh bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
       <div className="text-4xl">🃏</div>
       <div className="w-10 h-10 border-2 border-[#e9c349]/30 border-t-[#e9c349] rounded-full animate-spin" />
+      {hint && <p className="text-white/40 text-xs">{hint}</p>}
     </div>
   )
 }
@@ -45,7 +46,7 @@ export function App() {
     case 'room-setup':
       return <Lobby />
     case 'waiting':
-      return <Suspense fallback={<LoadingScreen />}><WaitingRoom /></Suspense>
+      return <Suspense fallback={<LoadingScreen hint="正在加载语音相关功能..." />}><WaitingRoom /></Suspense>
     case 'game':
       return <Suspense fallback={<div />}><PokerTable /></Suspense>
     default:
