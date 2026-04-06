@@ -291,6 +291,12 @@ export function PokerTable() {
 
   return (
     <div className="fixed inset-0 bg-[#131313] flex flex-col">
+      {/* Portrait rotation prompt */}
+      <div className="portrait-block fixed inset-0 z-[999] bg-[#0a0a0a] flex-col items-center justify-center gap-4">
+        <div className="text-5xl animate-[spin_2s_ease-in-out_infinite]">📱</div>
+        <p className="text-[#d4a843] font-bold text-lg">请旋转手机至横屏</p>
+        <p className="text-[#666] text-xs">横屏体验更佳</p>
+      </div>
       {/* Menu button — top left */}
       <button
         onClick={() => setMenuOpen(true)}

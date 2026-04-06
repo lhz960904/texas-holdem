@@ -46,16 +46,13 @@ html, body {
   overflow: hidden;
 }
 
-/* Force landscape only when game screen is active */
+/* Portrait overlay — prompt user to rotate phone */
+body.force-landscape .portrait-block {
+  display: none;
+}
 @media (orientation: portrait) and (max-width: 768px) {
-  body.force-landscape #root {
-    width: 100dvh;
-    height: 100dvw;
-    transform: rotate(90deg);
-    transform-origin: top left;
-    position: absolute;
-    top: 0;
-    left: 100dvw;
+  body.force-landscape .portrait-block {
+    display: flex;
   }
 }
 
