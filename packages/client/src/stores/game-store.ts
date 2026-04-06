@@ -348,16 +348,22 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     wsClient.on('error', ({ message }) => {
       console.error('[WS Error]', message)
-      if (message === 'Room not found') {
+
+      // Join failures — redirect back to lobby
+      const joinErrors = ['Room not found', '房间已满', '游戏进行中，无法加入', 'Failed to join room']
+      if (joinErrors.includes(message)) {
         clearRoomCode()
         if (!get().room) {
+          alert(message)
           set({ screen: 'lobby' })
         }
+        return
       }
+
       if (message === '筹码归零，已离开牌桌' || message === '余额不足，无法加入游戏') {
         clearRoomCode()
+        alert(message)
         set({ room: null, screen: 'lobby' })
-        // Refresh user balance
         const token = get().token
         if (token) {
           fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
@@ -365,6 +371,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
             .then(({ user }) => { if (user) set({ user }) })
             .catch(() => {})
         }
+        return
       }
     })
 

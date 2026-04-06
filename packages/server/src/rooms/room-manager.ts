@@ -89,8 +89,8 @@ export class RoomManager {
       return { player: existing, isReconnect: true }
     }
 
-    if (room.status === 'playing') throw new Error('Game already started')
-    if (room.players.size >= room.config.maxPlayers) throw new Error('Room is full')
+    if (room.status === 'playing') throw new Error('游戏进行中，无法加入')
+    if (room.players.size >= room.config.maxPlayers) throw new Error('房间已满')
 
     // Find next available seat
     const usedSeats = new Set([...room.players.values()].map(p => p.seatIndex))
