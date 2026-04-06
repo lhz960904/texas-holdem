@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Room, RoomEvent, type Participant } from 'livekit-client'
+import { Room, RoomEvent, Track, type Participant, type RemoteTrackPublication } from 'livekit-client'
 import { useGameStore } from '../stores/game-store'
 
 export function useVoice() {
@@ -72,6 +72,44 @@ export function useVoice() {
     }
   }, [isMuted])
 
+  // Attach remote audio tracks to DOM for playback
+  useEffect(() => {
+    const lkRoom = roomRef.current
+    if (!lkRoom) return
+
+    const attachTrack = (pub: RemoteTrackPublication) => {
+      if (pub.kind !== Track.Kind.Audio || !pub.track) return
+      const el = pub.track.attach()
+      el.id = `voice-${pub.trackSid}`
+      document.body.appendChild(el)
+      console.log('[Voice] attached remote audio track:', pub.trackSid)
+    }
+    const detachTrack = (pub: RemoteTrackPublication) => {
+      if (pub.kind !== Track.Kind.Audio) return
+      const el = document.getElementById(`voice-${pub.trackSid}`)
+      if (el) el.remove()
+      pub.track?.detach()
+      console.log('[Voice] detached remote audio track:', pub.trackSid)
+    }
+
+    lkRoom.on(RoomEvent.TrackSubscribed, (_track, pub) => attachTrack(pub))
+    lkRoom.on(RoomEvent.TrackUnsubscribed, (_track, pub) => detachTrack(pub))
+
+    // Attach any already-subscribed tracks
+    lkRoom.remoteParticipants.forEach((p) => {
+      p.audioTrackPublications.forEach((pub) => {
+        if (pub.isSubscribed) attachTrack(pub)
+      })
+    })
+
+    return () => {
+      lkRoom.off(RoomEvent.TrackSubscribed, attachTrack as any)
+      lkRoom.off(RoomEvent.TrackUnsubscribed, detachTrack as any)
+      // Clean up all voice audio elements
+      document.querySelectorAll('[id^="voice-"]').forEach((el) => el.remove())
+    }
+  }, [connected])
+
   // Track active speakers
   useEffect(() => {
     const lkRoom = roomRef.current
@@ -81,7 +119,7 @@ export function useVoice() {
     }
     lkRoom.on(RoomEvent.ActiveSpeakersChanged, handler)
     return () => { lkRoom.off(RoomEvent.ActiveSpeakersChanged, handler) }
-  }, [connected]) // re-attach when connection state changes
+  }, [connected])
 
   // Auto-connect when entering game room
   useEffect(() => {
