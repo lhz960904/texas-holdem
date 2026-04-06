@@ -106,7 +106,7 @@ export function PlayerSeat({
     <div
       data-testid="player-seat"
       data-seat={player.seatIndex}
-      className={`absolute flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 ${isFolded ? 'grayscale opacity-40' : ''}`}
+      className={`absolute z-15 flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 ${isFolded ? 'grayscale opacity-40' : ''}`}
       style={{ ...style, transition: 'opacity 0.5s ease, filter 0.5s ease' }}
     >
       {isRight ? (

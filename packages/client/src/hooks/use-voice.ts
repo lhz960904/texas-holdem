@@ -8,7 +8,7 @@ export function useVoice() {
   const [speakingParticipants, setSpeaking] = useState<Set<string>>(new Set())
   const [connected, setConnected] = useState(false)
   const gameRoom = useGameStore((s) => s.room)
-  const playerId = useGameStore((s) => s.playerId)
+  const playerId = useGameStore((s) => s.user?.id ?? null)
 
   const connect = useCallback(async () => {
     if (!gameRoom || !playerId) return

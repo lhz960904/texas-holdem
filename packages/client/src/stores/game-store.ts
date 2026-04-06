@@ -4,12 +4,25 @@ import type { ShowdownResult, SettleWinner } from '@texas-holdem/shared'
 import { WsClient } from '../lib/ws-client'
 import { sounds } from '../lib/sounds'
 
-export type Screen = 'lobby' | 'room-setup' | 'waiting' | 'game'
+export type Screen = 'login' | 'lobby' | 'room-setup' | 'waiting' | 'game'
+
+export interface AuthUser {
+  id: string
+  username: string
+  nickname: string
+  avatar: string
+  chips_balance: number
+  games_played: number
+  games_won: number
+}
 
 interface GameState {
+  // Auth
+  token: string | null
+  user: AuthUser | null
+
   // Connection
   wsClient: WsClient | null
-  playerId: string | null
   connected: boolean
 
   // Room
@@ -31,7 +44,7 @@ interface GameState {
 
   // Animations
   lastAction: { seatIndex: number; type: string } | null
-  potCollectTarget: number | null // seat index of winner for chip fly animation
+  potCollectTarget: number | null
 
   // Screen
   screen: Screen
@@ -39,9 +52,12 @@ interface GameState {
 
 interface GameActions {
   setScreen: (screen: Screen) => void
-  initConnection: (playerId: string) => void
+  login: (username: string, password: string, avatar: string) => Promise<{ error?: string; isNewUser?: boolean }>
+  logout: () => void
+  initConnection: () => void
   disconnect: () => void
-  joinRoom: (code: string, nickname: string, avatar: string) => void
+  createRoom: (config: any) => Promise<{ code?: string; error?: string }>
+  joinRoom: (code: string) => void
   tryReconnect: () => boolean
   toggleReady: () => void
   startGame: () => void
@@ -50,36 +66,36 @@ interface GameActions {
   leaveRoom: () => void
   clearSettle: () => void
   clearAnimations: () => void
+  updateAvatar: (avatar: string) => Promise<void>
 }
 
-const STORAGE_KEY = 'texas-holdem-session'
+const TOKEN_KEY = 'texas-holdem-token'
+const ROOM_KEY = 'texas-holdem-room'
 
-interface SessionData {
-  playerId: string
-  roomCode: string
-  nickname: string
-  avatar: string
+function saveToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+function loadToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY)
+}
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY)
 }
 
-function saveSession(data: SessionData) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+function saveRoomCode(code: string) {
+  localStorage.setItem(ROOM_KEY, code)
 }
-
-function loadSession(): SessionData | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    return JSON.parse(raw)
-  } catch { return null }
+function loadRoomCode(): string | null {
+  return localStorage.getItem(ROOM_KEY)
 }
-
-function clearSession() {
-  localStorage.removeItem(STORAGE_KEY)
+function clearRoomCode() {
+  localStorage.removeItem(ROOM_KEY)
 }
 
 const initialState: GameState = {
+  token: null,
+  user: null,
   wsClient: null,
-  playerId: null,
   connected: false,
   room: null,
   myCards: null,
@@ -94,7 +110,11 @@ const initialState: GameState = {
   revealedCards: new Map(),
   lastAction: null,
   potCollectTarget: null,
-  screen: 'lobby',
+  screen: 'login',
+}
+
+function authHeaders(token: string) {
+  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 }
 
 export const useGameStore = create<GameState & GameActions>((set, get) => ({
@@ -102,41 +122,69 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
   setScreen: (screen) => set({ screen }),
 
-  initConnection: (playerId) => {
+  login: async (username, password, avatar) => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, avatar }),
+      })
+      const data = await res.json()
+      if (!res.ok) return { error: data.error }
+
+      saveToken(data.token)
+      set({ token: data.token, user: data.user, screen: 'lobby' })
+
+      // Auto-connect WS after login
+      get().initConnection()
+
+      return { isNewUser: data.isNewUser }
+    } catch {
+      return { error: '网络错误' }
+    }
+  },
+
+  logout: () => {
+    get().wsClient?.disconnect()
+    clearToken()
+    clearRoomCode()
+    set({ ...initialState })
+  },
+
+  initConnection: () => {
+    const token = get().token
+    const user = get().user
+    if (!token || !user) return
+
     const existing = get().wsClient
     if (existing) existing.disconnect()
 
-    const wsClient = new WsClient(playerId)
+    const wsClient = new WsClient(user.id, token)
 
     // Register all server event handlers
     wsClient.on('room-state', ({ room, hands, myCards }) => {
       const currentScreen = get().screen
-      // If we were in game and room goes back to waiting (settle), stay on game screen
-      // so the table shows ready controls instead of jumping to waiting room
       let screen: Screen
       if (room.status === 'playing') {
         screen = 'game'
       } else if (currentScreen === 'game') {
-        // Post-settle: stay on game screen to show ready button
         screen = 'game'
       } else {
         screen = 'waiting'
       }
+      // Save room code for reconnection
+      saveRoomCode(room.code)
       set({ room, hands, myCards: myCards ?? null, screen })
     })
 
     wsClient.on('player-joined', ({ player }) => {
       set((state) => {
         if (!state.room) return {}
-        // Prevent duplicates — filter out any existing player with same seatIndex or id
         const filtered = state.room.players.filter(
           (p) => p.seatIndex !== player.seatIndex && p.id !== player.id
         )
         return {
-          room: {
-            ...state.room,
-            players: [...filtered, player],
-          },
+          room: { ...state.room, players: [...filtered, player] },
         }
       })
     })
@@ -158,15 +206,12 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         if (!state.room) return {}
         const players = state.room.players
         const seats = players.map((p) => p.seatIndex).sort((a, b) => a - b)
-        // For 2 players: dealer=seat[0], SB=next, BB=next
-        // For 3+: dealer=dealerSeat, SB=next, BB=next
         const dealerIdx = seats.indexOf(dealerSeat)
         const sbIdx = (dealerIdx + 1) % seats.length
         const bbIdx = (dealerIdx + (seats.length === 2 ? 1 : 2)) % seats.length
         const sbSeat = seats[sbIdx]
         const bbSeat = seats.length === 2 ? seats[dealerIdx] : seats[bbIdx]
 
-        // Initialize hands with blind bets and deduct from player chips
         const initHands = players.map((p) => ({
           seatIndex: p.seatIndex,
           bet: p.seatIndex === sbSeat ? blinds.small : p.seatIndex === bbSeat ? blinds.big : 0,
@@ -174,7 +219,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           hasActed: false,
         }))
 
-        // Deduct blinds from player chips display
         const updatedPlayers = players.map((p) => {
           if (p.seatIndex === sbSeat) return { ...p, chips: p.chips - blinds.small }
           if (p.seatIndex === bbSeat) return { ...p, chips: p.chips - blinds.big }
@@ -221,25 +265,19 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       sounds.play('flip')
       set((state) => {
         if (!state.room?.game) return {}
-        // Reset all bets to 0 on phase change (collectBets was called)
         const resetHands = state.hands.map((h) => ({ ...h, bet: 0 }))
         return {
           hands: resetHands,
           room: {
             ...state.room,
-            game: {
-              ...state.room.game,
-              phase: phase as GamePhase,
-              communityCards,
-            },
+            game: { ...state.room.game, phase: phase as GamePhase, communityCards },
           },
         }
       })
     })
 
     wsClient.on('turn', ({ seatIndex, deadline, minRaise, currentBet, hands: turnHands }) => {
-      // Play turn alert if it's my turn
-      const mySeat = get().room?.players.find((p) => p.id === get().playerId)?.seatIndex
+      const mySeat = get().room?.players.find((p) => p.id === get().user?.id)?.seatIndex
       if (mySeat !== undefined && seatIndex === mySeat) {
         sounds.play('turnAlert')
       }
@@ -250,7 +288,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           minRaise,
           currentBet,
         }
-        // Update hands if provided by server
         if (turnHands) {
           updates.hands = turnHands
         }
@@ -265,19 +302,21 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     })
 
     wsClient.on('player-action', ({ seatIndex, type, pot, chips }) => {
-      if (type === 'fold') {
-        sounds.play('fold')
-      } else if (type === 'check') {
-        sounds.play('check')
-      } else {
-        sounds.play('chips')
-      }
+      if (type === 'fold') sounds.play('fold')
+      else if (type === 'check') sounds.play('check')
+      else sounds.play('chips')
+
       set((state) => {
         if (!state.room?.game) return {}
-        // Update the acting player's chips
-        const updatedPlayers = state.room.players.map((p) =>
-          p.seatIndex === seatIndex ? { ...p, chips } : p
-        )
+        const updatedPlayers = state.room.players.map((p) => {
+          if (p.seatIndex !== seatIndex) return p
+          return {
+            ...p,
+            chips,
+            // Mark player as folded when they fold
+            status: type === 'fold' ? 'folded' as const : p.status,
+          }
+        })
         return {
           lastAction: { seatIndex, type },
           room: {
@@ -309,19 +348,29 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     wsClient.on('error', ({ message }) => {
       console.error('[WS Error]', message)
-      // Only clear session if room truly doesn't exist
       if (message === 'Room not found') {
-        clearSession()
-        // Only go to lobby if we don't already have a room loaded
+        clearRoomCode()
         if (!get().room) {
           set({ screen: 'lobby' })
+        }
+      }
+      if (message === '筹码归零，已离开牌桌' || message === '余额不足，无法加入游戏') {
+        clearRoomCode()
+        set({ room: null, screen: 'lobby' })
+        // Refresh user balance
+        const token = get().token
+        if (token) {
+          fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.json())
+            .then(({ user }) => { if (user) set({ user }) })
+            .catch(() => {})
         }
       }
     })
 
     sounds.preload()
     wsClient.connect()
-    set({ wsClient, playerId, connected: true })
+    set({ wsClient, connected: true })
   },
 
   disconnect: () => {
@@ -329,23 +378,68 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set({ wsClient: null, connected: false })
   },
 
-  joinRoom: (code, nickname, avatar) => {
-    const playerId = get().playerId
-    if (playerId) {
-      saveSession({ playerId, roomCode: code, nickname, avatar })
+  createRoom: async (config) => {
+    const token = get().token
+    if (!token) return { error: 'Not authenticated' }
+
+    try {
+      const res = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ config }),
+      })
+      const data = await res.json()
+      if (!res.ok) return { error: data.error }
+
+      // Join the room via WS
+      const user = get().user!
+      get().wsClient?.send('join-room', { code: data.code, nickname: user.nickname, avatar: user.avatar })
+      saveRoomCode(data.code)
+      set({ room: null, screen: 'waiting' })
+      return { code: data.code }
+    } catch {
+      return { error: '网络错误' }
     }
-    get().wsClient?.send('join-room', { code, nickname, avatar })
-    set({ screen: 'waiting' })
+  },
+
+  joinRoom: (code) => {
+    const user = get().user
+    if (!user) return
+    get().wsClient?.send('join-room', { code, nickname: user.nickname, avatar: user.avatar })
+    saveRoomCode(code)
+    set({ room: null, screen: 'waiting' })
   },
 
   tryReconnect: () => {
-    const session = loadSession()
-    if (!session) return false
-    const { playerId, roomCode, nickname, avatar } = session
-    get().initConnection(playerId)
-    // Messages are queued until WS connects
-    get().wsClient?.send('join-room', { code: roomCode, nickname, avatar })
-    set({ playerId })
+    const token = loadToken()
+    if (!token) return false
+
+    // Validate token and fetch user
+    fetch('/api/auth/me', { headers: authHeaders(token) })
+      .then((res) => {
+        if (!res.ok) throw new Error('Invalid token')
+        return res.json()
+      })
+      .then(({ user }) => {
+        set({ token, user, screen: 'lobby' })
+        // Connect WS
+        get().initConnection()
+
+        // If we have a saved room code, try to rejoin
+        const roomCode = loadRoomCode()
+        if (roomCode) {
+          get().wsClient?.send('join-room', {
+            code: roomCode,
+            nickname: user.nickname,
+            avatar: user.avatar,
+          })
+        }
+      })
+      .catch(() => {
+        clearToken()
+        clearRoomCode()
+      })
+
     return true
   },
 
@@ -367,7 +461,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
   leaveRoom: () => {
     get().wsClient?.send('leave-room', {})
-    clearSession()
+    clearRoomCode()
     set({
       room: null,
       myCards: null,
@@ -382,6 +476,14 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       revealedCards: new Map(),
       screen: 'lobby',
     })
+    // Refresh user balance from server
+    const token = get().token
+    if (token) {
+      fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(({ user }) => { if (user) set({ user }) })
+        .catch(() => {})
+    }
   },
 
   clearSettle: () => {
@@ -395,5 +497,18 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
   clearAnimations: () => {
     set({ lastAction: null, potCollectTarget: null })
+  },
+
+  updateAvatar: async (avatar: string) => {
+    const token = get().token
+    if (!token) return
+    await fetch('/api/auth/avatar', {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ avatar }),
+    })
+    set((state) => ({
+      user: state.user ? { ...state.user, avatar } : null,
+    }))
   },
 }))

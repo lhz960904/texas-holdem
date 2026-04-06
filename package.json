@@ -6,7 +6,8 @@
     "dev:server": "pnpm --filter @texas-holdem/server dev",
     "dev:client": "pnpm --filter @texas-holdem/client dev",
     "dev": "pnpm run dev:server & pnpm run dev:client",
-    "build": "pnpm --filter @texas-holdem/shared build && pnpm --filter @texas-holdem/server build && pnpm --filter @texas-holdem/client build",
+    "build": "pnpm --filter @texas-holdem/shared build && pnpm --filter @texas-holdem/client build && pnpm --filter @texas-holdem/server build",
+    "start": "cd packages/server && node dist/index.js",
     "test": "pnpm -r test"
   },
   "devDependencies": {

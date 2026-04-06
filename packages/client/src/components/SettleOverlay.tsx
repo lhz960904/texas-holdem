@@ -14,8 +14,9 @@ const RED_SUITS = new Set(['hearts', 'diamonds'])
 const COUNTDOWN_SECONDS = 5
 
 export function SettleOverlay() {
-  const { settleWinners, settleShowCards, showdownResults, room, playerId, clearSettle, showCards } =
+  const { settleWinners, settleShowCards, showdownResults, room, user, clearSettle, showCards } =
     useGameStore()
+  const playerId = user?.id
 
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS)
 

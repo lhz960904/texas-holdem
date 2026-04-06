@@ -6,17 +6,19 @@ export class WsClient {
   private ws: WebSocket | null = null
   private handlers = new Map<string, Set<Function>>()
   private playerId: string
+  private token: string
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private pendingMessages: string[] = []
   private hasConnectedBefore = false
 
-  constructor(playerId: string) {
+  constructor(playerId: string, token: string) {
     this.playerId = playerId
+    this.token = token
   }
 
   connect() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const url = `${protocol}//${location.host}/ws?playerId=${this.playerId}`
+    const url = `${protocol}//${location.host}/ws?token=${encodeURIComponent(this.token)}`
     this.ws = new WebSocket(url)
     this.ws.onopen = () => {
       // Flush pending messages

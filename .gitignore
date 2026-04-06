@@ -2,5 +2,8 @@ node_modules/
 dist/
 .env
 *.db
+*.db-wal
+*.db-shm
+packages/server/data/
 .DS_Store
 *.local

@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - poker-data:/app/packages/server/data
+    environment:
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-change-this-in-production}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    restart: unless-stopped
+
+volumes:
+  poker-data:

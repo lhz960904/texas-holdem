@@ -10,16 +10,22 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.82.0",
     "@hono/node-server": "^1.13.7",
     "@texas-holdem/shared": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^11.7.0",
     "hono": "^4.6.20",
+    "jsonwebtoken": "^9.0.3",
     "livekit-server-sdk": "^2.9.4",
     "nanoid": "^5.0.9",
+    "poker-evaluator": "^2.1.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/better-sqlite3": "^7.6.12",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.10.7",
     "@types/ws": "^8.5.13",
     "tsx": "^4.19.2",

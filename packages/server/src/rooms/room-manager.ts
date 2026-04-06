@@ -38,7 +38,7 @@ export class RoomManager {
       nickname: hostId,
       avatar: '',
       seatIndex: 0,
-      chips: config.buyIn,
+      chips: 0, // will be set from user balance on WS join
       status: 'sitting',
       isReady: false,
       isConnected: true,
@@ -102,7 +102,7 @@ export class RoomManager {
       nickname,
       avatar,
       seatIndex,
-      chips: room.config.buyIn,
+      chips: 0, // will be set from user balance on WS join
       status: 'sitting',
       isReady: false,
       isConnected: true,
@@ -180,9 +180,8 @@ export class RoomManager {
     if (!room) throw new Error('Room not found')
     if (room.hostId !== requesterId) throw new Error('Only host can start the game')
 
-    // Only players with chips > 0 can play
     const activePlayers = [...room.players.values()].filter(p => p.chips > 0)
-    if (activePlayers.length < 2) throw new Error('Need at least 2 players with chips')
+    if (activePlayers.length < 2) throw new Error('筹码充足的玩家不足2人，无法开始')
 
     room.status = 'playing'
 

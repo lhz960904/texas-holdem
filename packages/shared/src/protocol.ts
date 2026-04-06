@@ -1,4 +1,4 @@
-import type { ActionType, Card, GameState, PlayerHandState, PlayerInfo, RoomConfig, RoomState, HandRank } from './types'
+import type { ActionType, Card, PlayerHandState, PlayerInfo, RoomState, HandRank } from './types'
 
 export interface ClientEvents {
   'join-room': { code: string; nickname: string; avatar: string }
@@ -7,6 +7,9 @@ export interface ClientEvents {
   'action': { type: ActionType; amount?: number }
   'leave-room': {}
   'show-cards': {}
+  'add-ai': { personalityId: string }
+  'remove-ai': { playerId: string }
+  'list-ai-personalities': {}
 }
 
 export interface ServerEvents {
@@ -22,6 +25,7 @@ export interface ServerEvents {
   'settle': { winners: SettleWinner[]; showCards: boolean }
   'cards-revealed': { seatIndex: number; cards: [Card, Card] }
   'error': { message: string }
+  'ai-personalities': { personalities: { id: string; name: string; avatar: string; description: string }[] }
 }
 
 export interface ShowdownResult { seatIndex: number; cards: [Card, Card]; handRank: HandRank; handName: string }

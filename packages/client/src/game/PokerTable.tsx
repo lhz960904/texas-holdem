@@ -113,7 +113,7 @@ export function PokerTable() {
   const currentTurn = useGameStore((s) => s.currentTurn)
   const turnDeadline = useGameStore((s) => s.turnDeadline)
   const handsArr = useGameStore((s) => s.hands)
-  const playerId = useGameStore((s) => s.playerId)
+  const playerId = useGameStore((s) => s.user?.id ?? null)
   const settleWinners = useGameStore((s) => s.settleWinners)
   const showdownResults = useGameStore((s) => s.showdownResults)
   const revealedCards = useGameStore((s) => s.revealedCards)
@@ -130,11 +130,35 @@ export function PokerTable() {
   const betAnimTimeouts = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
   const [raiseAmount, setRaiseAmount] = useState(minRaise)
 
-  // Lock landscape
+  // Request fullscreen + lock landscape on game enter
   useEffect(() => {
+    const el = document.documentElement
+    const requestFS = el.requestFullscreen
+      ?? (el as any).webkitRequestFullscreen
+      ?? (el as any).msRequestFullscreen
+    if (requestFS && !document.fullscreenElement) {
+      requestFS.call(el).catch(() => {})
+    }
     try {
-      ; (screen.orientation as any)?.lock?.('landscape').catch(() => { })
-    } catch { }
+      ;(screen.orientation as any)?.lock?.('landscape').catch(() => {})
+    } catch {}
+    // Fallback: request fullscreen on first user tap (required by some browsers)
+    const onTap = () => {
+      if (!document.fullscreenElement) {
+        const r = el.requestFullscreen ?? (el as any).webkitRequestFullscreen
+        if (r) r.call(el).catch(() => {})
+      }
+      document.removeEventListener('click', onTap)
+    }
+    document.addEventListener('click', onTap, { once: true })
+
+    return () => {
+      document.removeEventListener('click', onTap)
+      const exitFS = document.exitFullscreen ?? (document as any).webkitExitFullscreen
+      if (exitFS && document.fullscreenElement) {
+        exitFS.call(document).catch(() => {})
+      }
+    }
   }, [])
 
   // Timer tick
@@ -143,10 +167,11 @@ export function PokerTable() {
     return () => clearInterval(interval)
   }, [])
 
-  // Sync raise amount when minRaise changes
+  // Sync raise amount and close panel when turn changes
   useEffect(() => {
     setRaiseAmount(minRaise)
-  }, [minRaise])
+    setRaiseOpen(false)
+  }, [minRaise, currentTurn])
 
   // Bet push-in animation on player-action
   useEffect(() => {
@@ -225,16 +250,20 @@ export function PokerTable() {
   const myBet = myHand?.bet ?? 0
   const canCheck = currentBet === myBet
   const callAmount = Math.min(currentBet - myBet, myChips)
-  const effectiveMinRaise = Math.max(minRaise, currentBet - myBet + 1)
-  const effectiveRaise = Math.max(raiseAmount, effectiveMinRaise)
-  const halfPot = Math.max(effectiveMinRaise, Math.floor(pot / 2))
-  const fullPot = Math.max(effectiveMinRaise, pot)
+  // minRaise from server = minimum raise INCREMENT, effectiveMinRaise = minimum TOTAL bet to raise
+  const effectiveMinRaise = currentBet + minRaise
+  const maxRaiseBet = myBet + myChips // max total bet = already bet + remaining chips
+  const effectiveRaise = Math.min(Math.max(raiseAmount, effectiveMinRaise), maxRaiseBet)
+  const halfPot = Math.max(effectiveMinRaise, Math.floor(pot / 2) + currentBet)
+  const fullPot = Math.max(effectiveMinRaise, pot + currentBet)
+  const canRaise = maxRaiseBet >= effectiveMinRaise
 
   const handleRaise = () => sendAction('raise', effectiveRaise)
   const handleAllIn = () => sendAction('allIn', myChips)
   const leaveRoom = useGameStore((s) => s.leaveRoom)
   const toggleReady = useGameStore((s) => s.toggleReady)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [raiseOpen, setRaiseOpen] = useState(false)
 
   const isWaiting = room?.status === 'waiting'
   const amIReady = me?.isReady ?? false
@@ -324,9 +353,9 @@ export function PokerTable() {
         {/* Table container */}
         <div className="relative w-full max-w-5xl max-h-full" style={{ aspectRatio: '2.2/1' }}>
           {/* Outer border */}
+          {/* Golden inner border — inset inside the grey border, above table, below players */}
+          <div className="absolute inset-[12px] rounded-[188px] border-[3px] border-primary/40 pointer-events-none z-10" />
           <div className="absolute inset-0 rounded-[200px] border-[12px] border-[#2a2a2a] shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-hidden">
-            {/* Golden inner border */}
-            <div className="absolute inset-0 border-[3px] border-primary/40 rounded-[190px] pointer-events-none z-10" />
             {/* Felt surface */}
             <div className="absolute inset-0 poker-felt">
               {/* Community cards — always show 5 slots, undealt as face-down */}
@@ -509,7 +538,7 @@ export function PokerTable() {
                 }`}
               >{amIReady ? '✓ Ready' : 'Ready'}</button>
               <span className="text-[10px] text-white/30">
-                {players.filter(p => p.isReady).length}/{players.length} ready
+                {players.filter(p => p.isReady && !p.isAI).length}/{players.filter(p => !p.isAI).length} ready
               </span>
             </div>
           ) : (
@@ -536,11 +565,41 @@ export function PokerTable() {
                   >Call <span className="opacity-70">{callAmount}</span></button>
                 ) : null}
 
-                <button
-                  onClick={handleRaise}
-                  disabled={!isMyTurn || myChips <= callAmount}
-                  className="h-8 px-3 sm:px-4 rounded-lg bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
-                >Raise <span className="opacity-70">{effectiveRaise}</span></button>
+                {/* Raise button with popover */}
+                <div className="relative">
+                  <button
+                    onClick={() => isMyTurn && canRaise && setRaiseOpen(!raiseOpen)}
+                    disabled={!isMyTurn || !canRaise}
+                    className="h-8 px-3 sm:px-4 rounded-lg bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
+                  >Raise <span className="opacity-70">{effectiveRaise}</span></button>
+
+                  {/* Raise panel — pops up above the button */}
+                  {raiseOpen && isMyTurn && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#1a1a1a] border border-[#333] rounded-xl p-3 shadow-2xl min-w-[200px] z-50">
+                      {/* Slider */}
+                      <input
+                        type="range" min={effectiveMinRaise} max={maxRaiseBet} value={effectiveRaise}
+                        onChange={(e) => setRaiseAmount(Number(e.target.value))}
+                        className="w-full accent-[#e9c349] h-2 mb-2"
+                      />
+                      {/* Amount display */}
+                      <p className="text-center text-[#e9c349] font-mono font-bold text-sm mb-2">{effectiveRaise.toLocaleString()}</p>
+                      {/* Preset buttons */}
+                      <div className="flex gap-1.5 mb-2">
+                        {[{ l: '1/2 Pot', v: halfPot }, { l: 'Pot', v: fullPot }, { l: 'Max', v: maxRaiseBet }].map(({ l, v }) => (
+                          <button key={l} onClick={() => setRaiseAmount(v)}
+                            className="flex-1 py-1.5 text-[10px] font-bold rounded-lg bg-white/10 text-white/70 active:bg-white/20"
+                          >{l}</button>
+                        ))}
+                      </div>
+                      {/* Confirm raise */}
+                      <button
+                        onClick={() => { handleRaise(); setRaiseOpen(false) }}
+                        className="w-full py-2 rounded-lg bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-xs uppercase"
+                      >确认加注 {effectiveRaise.toLocaleString()}</button>
+                    </div>
+                  )}
+                </div>
 
                 <button
                   onClick={handleAllIn}
@@ -548,23 +607,6 @@ export function PokerTable() {
                   className="h-8 px-3 sm:px-4 rounded-lg border border-[#e9c349] text-[#e9c349] font-headline font-bold text-[11px] sm:text-xs uppercase disabled:opacity-25"
                 >All In</button>
               </div>
-
-              {isMyTurn && (
-                <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0 w-[130px]">
-                  <input
-                    type="range" min={effectiveMinRaise} max={myChips} value={effectiveRaise}
-                    onChange={(e) => setRaiseAmount(Number(e.target.value))}
-                    className="w-full accent-[#e9c349] h-1"
-                  />
-                  <div className="flex gap-0.5">
-                    {[{ l: '½', v: halfPot }, { l: 'P', v: fullPot }, { l: 'M', v: myChips }].map(({ l, v }) => (
-                      <button key={l} onClick={() => setRaiseAmount(v)}
-                        className="w-6 h-5 text-[7px] font-bold rounded bg-white/10 text-white/50"
-                      >{l}</button>
-                ))}
-              </div>
-            </div>
-          )}
             </>
           )}
         </div>
