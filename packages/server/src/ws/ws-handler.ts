@@ -21,6 +21,7 @@ export class WsHandler {
   private connections: Map<WebSocket, PlayerConnection> = new Map()
   private playerSockets: Map<string, WebSocket> = new Map()
   private turnTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
+  private nextHandTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private roomManager: RoomManager
 
   constructor(roomManager: RoomManager) {
@@ -249,8 +250,10 @@ export class WsHandler {
           winners: settleResult.winners,
           showCards: settleResult.showdown,
         })
+
+        // Schedule next hand after 5 seconds
+        this.scheduleNextHand(conn.roomId, room)
       } else if (phase === 'showdown') {
-        // showdown phase: all cards dealt, engine will settle after broadcasting
         const settleResult = engine.settle()
 
         this.broadcastToRoom(conn.roomId, 'showdown', {
@@ -266,6 +269,9 @@ export class WsHandler {
           winners: settleResult.winners,
           showCards: true,
         })
+
+        // Schedule next hand after 5 seconds
+        this.scheduleNextHand(conn.roomId, room)
       } else {
         // Normal phase change or same phase, broadcast updated turn
         if (phase !== prevPhase) {
@@ -390,6 +396,7 @@ export class WsHandler {
         winners: settleResult.winners,
         showCards: settleResult.showdown,
       })
+      this.scheduleNextHand(roomId, room)
     } else if (phase === 'showdown') {
       const settleResult = engine.settle()
 
@@ -406,6 +413,7 @@ export class WsHandler {
         winners: settleResult.winners,
         showCards: true,
       })
+      this.scheduleNextHand(roomId, room)
     } else {
       const updatedState = engine.getState()
       if (updatedState.currentTurn >= 0) {
@@ -419,6 +427,67 @@ export class WsHandler {
         this.startTurnTimer(roomId, updatedState.currentTurn, room.config.turnTime)
       }
     }
+  }
+
+  private scheduleNextHand(roomId: string, room: any): void {
+    // Clear any existing next-hand timer
+    const existing = this.nextHandTimers.get(roomId)
+    if (existing) clearTimeout(existing)
+
+    const timer = setTimeout(() => {
+      this.nextHandTimers.delete(roomId)
+      const engine = this.roomManager.getEngine(roomId)
+      const currentRoom = this.roomManager.getRoom(roomId)
+      if (!engine || !currentRoom) return
+
+      // Check we still have ≥2 players with chips
+      const activePlayers = [...currentRoom.players.values()].filter((p) => p.chips > 0)
+      if (activePlayers.length < 2) return
+
+      // Move dealer to next seat
+      const seats = activePlayers.map((p) => p.seatIndex).sort((a, b) => a - b)
+      const prevDealer = engine.getState().dealerSeat
+      const prevIdx = seats.indexOf(prevDealer)
+      const nextDealer = seats[(prevIdx + 1) % seats.length]
+
+      // Update player chips in engine from room state
+      for (const p of currentRoom.players.values()) {
+        const ps = engine.getPlayerState(p.seatIndex)
+        if (ps) p.chips = ps.chips
+      }
+
+      // Start next hand
+      engine.startHand(nextDealer)
+      const gameState = engine.getState()
+
+      this.broadcastToRoom(roomId, 'game-start', {
+        dealerSeat: nextDealer,
+        blinds: { small: currentRoom.config.blinds.small, big: currentRoom.config.blinds.big },
+      })
+
+      // Send private cards
+      for (const player of currentRoom.players.values()) {
+        const playerWs = this.playerSockets.get(player.id)
+        if (playerWs) {
+          const cards = engine.getPlayerCards(player.seatIndex)
+          if (cards) this.send(playerWs, 'deal-cards', { cards })
+        }
+      }
+
+      // Broadcast turn
+      if (gameState.currentTurn >= 0) {
+        this.broadcastToRoom(roomId, 'turn', {
+          seatIndex: gameState.currentTurn,
+          deadline: gameState.turnDeadline,
+          minRaise: engine.getMinRaise(),
+          currentBet: engine.getCurrentBet(),
+          hands: engine.getPlayerHandStates(),
+        })
+        this.startTurnTimer(roomId, gameState.currentTurn, currentRoom.config.turnTime)
+      }
+    }, 5000)
+
+    this.nextHandTimers.set(roomId, timer)
   }
 
   send<E extends ServerEventName>(ws: WebSocket, event: E, data: ServerEvents[E]): void {

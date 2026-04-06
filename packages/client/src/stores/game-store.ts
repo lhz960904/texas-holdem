@@ -155,7 +155,10 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
         return {
           screen: 'game' as Screen,
+          myCards: null,
           hands: initHands,
+          currentTurn: -1,
+          turnDeadline: null,
           showdownResults: [],
           settleWinners: [],
           settleShowCards: false,
