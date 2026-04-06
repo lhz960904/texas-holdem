@@ -3,7 +3,7 @@
   "short_name": "ALL IN",
   "description": "和朋友来一局德州",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "any",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",

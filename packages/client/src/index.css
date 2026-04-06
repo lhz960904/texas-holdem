@@ -41,12 +41,17 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  background: #0a0a0a;
 }
 
 #root {
   width: 100dvw;
   height: 100dvh;
   overflow: hidden;
+  /* Cover safe area with app background */
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+  background: #0a0a0a;
 }
 
 /* Force landscape only when game screen is active */
