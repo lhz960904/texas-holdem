@@ -179,13 +179,16 @@ export class RoomManager {
     const room = this.rooms.get(roomId)
     if (!room) throw new Error('Room not found')
     if (room.hostId !== requesterId) throw new Error('Only host can start the game')
-    if (room.players.size < 2) throw new Error('Need at least 2 players')
+
+    // Only players with chips > 0 can play
+    const activePlayers = [...room.players.values()].filter(p => p.chips > 0)
+    if (activePlayers.length < 2) throw new Error('Need at least 2 players with chips')
 
     room.status = 'playing'
 
     // Determine next dealer seat
     let dealerSeat: number
-    const seats = [...room.players.values()].map(p => p.seatIndex).sort((a, b) => a - b)
+    const seats = activePlayers.map(p => p.seatIndex).sort((a, b) => a - b)
 
     if (room.engine) {
       // Subsequent hand — move dealer, reuse engine with updated chips
@@ -193,15 +196,17 @@ export class RoomManager {
       const prevIdx = seats.indexOf(prevDealer)
       dealerSeat = seats[(prevIdx + 1) % seats.length]
 
-      // Re-add players with current chip counts
+      // Re-add only players with chips
       for (const player of room.players.values()) {
         room.engine.removePlayer(player.seatIndex)
+      }
+      for (const player of activePlayers) {
         room.engine.addPlayer(player.seatIndex, player.id, player.chips)
       }
     } else {
       // First hand — create new engine
       room.engine = new GameEngine(room.config.blinds.small, room.config.blinds.big)
-      for (const player of room.players.values()) {
+      for (const player of activePlayers) {
         room.engine.addPlayer(player.seatIndex, player.id, player.chips)
       }
       dealerSeat = seats[0]

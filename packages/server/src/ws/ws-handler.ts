@@ -145,12 +145,11 @@ export class WsHandler {
         hands: [],
       })
 
-      // Auto-start when all players are ready (≥2 players)
+      // Auto-start when all players with chips are ready (≥2)
       const room = this.roomManager.getRoom(conn.roomId)
-      if (room && room.players.size >= 2 && room.status === 'waiting') {
-        const allReady = [...room.players.values()].every(p => p.isReady)
-        if (allReady) {
-          // Start game automatically
+      if (room && room.status === 'waiting') {
+        const playersWithChips = [...room.players.values()].filter(p => p.chips > 0)
+        if (playersWithChips.length >= 2 && playersWithChips.every(p => p.isReady)) {
           this.doStartGame(conn.roomId, room.hostId)
         }
       }

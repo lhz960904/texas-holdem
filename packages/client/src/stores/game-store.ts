@@ -166,13 +166,20 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         const sbSeat = seats[sbIdx]
         const bbSeat = seats.length === 2 ? seats[dealerIdx] : seats[bbIdx]
 
-        // Initialize hands with blind bets
+        // Initialize hands with blind bets and deduct from player chips
         const initHands = players.map((p) => ({
           seatIndex: p.seatIndex,
           bet: p.seatIndex === sbSeat ? blinds.small : p.seatIndex === bbSeat ? blinds.big : 0,
           totalBet: p.seatIndex === sbSeat ? blinds.small : p.seatIndex === bbSeat ? blinds.big : 0,
           hasActed: false,
         }))
+
+        // Deduct blinds from player chips display
+        const updatedPlayers = players.map((p) => {
+          if (p.seatIndex === sbSeat) return { ...p, chips: p.chips - blinds.small }
+          if (p.seatIndex === bbSeat) return { ...p, chips: p.chips - blinds.big }
+          return p
+        })
 
         return {
           screen: 'game' as Screen,
@@ -188,6 +195,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           revealedCards: new Map(),
           room: {
             ...state.room,
+            players: updatedPlayers,
             status: 'playing' as const,
             game: {
               id: '',
