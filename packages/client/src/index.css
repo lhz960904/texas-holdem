@@ -41,3 +41,26 @@ html, body {
   0%, 100% { box-shadow: 0 0 0 3px #ffd700, 0 0 15px rgba(255,215,0,0.3); }
   50% { box-shadow: 0 0 0 3px #ffd700, 0 0 25px rgba(255,215,0,0.5); }
 }
+
+@keyframes chipPushIn {
+  0% { transform: translate(var(--push-x, 0), var(--push-y, -30px)) scale(1.2); opacity: 0.5; }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+
+@keyframes chipCollect {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--collect-x, 0), var(--collect-y, 0)) scale(0.3); opacity: 0; }
+}
+
+@keyframes potCollect {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--winner-x, 0), var(--winner-y, 0)) scale(0.4); opacity: 0; }
+}
+
+.animate-chip-push-in {
+  animation: chipPushIn 0.4s ease-out;
+}
+
+.animate-chip-collect {
+  animation: chipCollect 0.6s ease-in forwards;
+}

@@ -133,33 +133,7 @@ export function PlayerSeat({
         </div>
       )}
 
-      {/* Bet display — small chip icon + amount */}
-      {bet > 0 && (
-        <div
-          className="mt-0.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full"
-          style={{
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            border: '1px solid rgba(255,215,0,0.4)',
-            animation: 'chipSlide 0.3s ease-out',
-          }}
-        >
-          {/* Mini chip icon */}
-          <div
-            className="w-3 h-3 rounded-full flex-shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #ffd700, #ff8c00)',
-              border: '1px dashed rgba(255,255,255,0.4)',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-            }}
-          />
-          <span
-            className="text-[10px] font-bold"
-            style={{ color: '#ffd700', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-          >
-            {bet.toLocaleString()}
-          </span>
-        </div>
-      )}
+      {/* Bet is now shown as scattered chips on the table via ChipPile */}
     </div>
   )
 }

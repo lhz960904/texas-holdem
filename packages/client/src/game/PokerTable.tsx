@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useGameStore } from '../stores/game-store'
 import { ActionBar } from '../components/ActionBar'
 import { SettleOverlay } from '../components/SettleOverlay'
 import { PlayingCard } from './PlayingCard'
 import { PlayerSeat } from './PlayerSeat'
+import { ChipPile } from './ChipPile'
+import { PotChips } from './PotChips'
 import type { Card } from '@texas-holdem/shared'
 
 // Seat positions as CSS percentages, indexed by player count
@@ -78,76 +80,17 @@ function getRotatedPositions(
   }))
 }
 
-// Chip denomination definitions for stacked chip visualization
-const CHIP_DENOMINATIONS = [
-  { value: 1000, color: 'linear-gradient(135deg, #ffd700, #ff8c00)', borderColor: 'rgba(255,255,255,0.5)', textColor: '#000' },
-  { value: 100, color: '#2c3e50', borderColor: 'rgba(255,255,255,0.4)', textColor: '#fff' },
-  { value: 25, color: '#27ae60', borderColor: 'rgba(255,255,255,0.4)', textColor: '#fff' },
-  { value: 5, color: '#c0392b', borderColor: 'rgba(255,255,255,0.4)', textColor: '#fff' },
-]
-
-interface ChipInfo {
-  color: string
-  borderColor: string
-  textColor: string
-  value: number
-}
-
-function ChipStack({ amount }: { amount: number }) {
-  const chips: ChipInfo[] = []
-  let remaining = amount
-
-  for (const d of CHIP_DENOMINATIONS) {
-    const count = Math.min(Math.floor(remaining / d.value), 3) // max 3 per denomination
-    for (let i = 0; i < count; i++) {
-      chips.push({ color: d.color, borderColor: d.borderColor, textColor: d.textColor, value: d.value })
-    }
-    remaining -= count * d.value
+// Calculate bet chip position: lerp from player toward center
+function getBetPosition(playerPos: { top: string; left: string }): { top: string; left: string } {
+  const pTop = parseFloat(playerPos.top) / 100
+  const pLeft = parseFloat(playerPos.left) / 100
+  const cTop = 0.42 // center Y
+  const cLeft = 0.50 // center X
+  const t = 0.4 // lerp factor
+  return {
+    top: `${((pTop + (cTop - pTop) * t) * 100).toFixed(1)}%`,
+    left: `${((pLeft + (cLeft - pLeft) * t) * 100).toFixed(1)}%`,
   }
-
-  // Ensure at least one chip visual if amount > 0
-  if (chips.length === 0 && amount > 0) {
-    const last = CHIP_DENOMINATIONS[CHIP_DENOMINATIONS.length - 1]
-    chips.push({ color: last.color, borderColor: last.borderColor, textColor: last.textColor, value: last.value })
-  }
-
-  return (
-    <div className="flex flex-col items-center" style={{ animation: 'chipSlide 0.4s ease-out' }}>
-      {/* Stacked chips */}
-      <div className="relative" style={{ height: `${Math.max(28, chips.length * 3 + 25)}px`, width: '28px' }}>
-        {chips.map((chip, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              width: '28px',
-              height: '28px',
-              bottom: `${i * 3}px`,
-              background: chip.color,
-              border: `2px dashed ${chip.borderColor}`,
-              boxShadow: `
-                0 2px 0 rgba(0,0,0,0.3),
-                0 3px 0 rgba(0,0,0,0.2),
-                inset 0 1px 0 rgba(255,255,255,0.2)
-              `,
-            }}
-          />
-        ))}
-      </div>
-      {/* Amount text below */}
-      <div
-        className="text-xs font-bold mt-1 px-2 py-0.5 rounded-full"
-        style={{
-          color: '#ffd700',
-          textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          border: '1px solid rgba(255,215,0,0.3)',
-        }}
-      >
-        {amount.toLocaleString()}
-      </div>
-    </div>
-  )
 }
 
 export function PokerTable() {
@@ -160,8 +103,13 @@ export function PokerTable() {
   const settleWinners = useGameStore((s) => s.settleWinners)
   const showdownResults = useGameStore((s) => s.showdownResults)
   const revealedCards = useGameStore((s) => s.revealedCards)
+  const lastAction = useGameStore((s) => s.lastAction)
+  const potCollectTarget = useGameStore((s) => s.potCollectTarget)
 
   const [now, setNow] = useState(Date.now())
+  const [betAnimations, setBetAnimations] = useState<Map<number, boolean>>(new Map())
+  const [potCollecting, setPotCollecting] = useState<{ seatIndex: number } | null>(null)
+  const betAnimTimeouts = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
 
   // Lock landscape
   useEffect(() => {
@@ -175,6 +123,38 @@ export function PokerTable() {
     const interval = setInterval(() => setNow(Date.now()), 200)
     return () => clearInterval(interval)
   }, [])
+
+  // Bet push-in animation on player-action
+  useEffect(() => {
+    if (lastAction && lastAction.type !== 'fold' && lastAction.type !== 'check') {
+      const seat = lastAction.seatIndex
+      setBetAnimations((prev) => new Map(prev).set(seat, true))
+      // Clear existing timeout for this seat
+      const existing = betAnimTimeouts.current.get(seat)
+      if (existing) clearTimeout(existing)
+      const timeout = setTimeout(() => {
+        setBetAnimations((prev) => {
+          const next = new Map(prev)
+          next.delete(seat)
+          return next
+        })
+      }, 400)
+      betAnimTimeouts.current.set(seat, timeout)
+    }
+  }, [lastAction])
+
+  // Pot collect animation on settle
+  useEffect(() => {
+    if (potCollectTarget !== null) {
+      setPotCollecting({ seatIndex: potCollectTarget })
+      const timeout = setTimeout(() => {
+        setPotCollecting(null)
+      }, 800)
+      return () => clearTimeout(timeout)
+    }
+    setPotCollecting(null)
+    return undefined
+  }, [potCollectTarget])
 
   const me = room?.players.find((p) => p.id === playerId)
   const mySeatIndex = me?.seatIndex ?? 0
@@ -279,12 +259,47 @@ export function PokerTable() {
           />
         </div>
 
-        {/* Pot display — stacked chips visualization */}
+        {/* Pot display — scattered chips visualization */}
         {pot > 0 && (
           <div className="absolute top-[28%] left-1/2 -translate-x-1/2 z-10">
-            <ChipStack amount={pot} />
+            <PotChips
+              amount={pot}
+              collecting={
+                potCollecting
+                  ? (() => {
+                      const winnerSeat = seatMap.find((s) => s.seatIndex === potCollecting.seatIndex)
+                      if (!winnerSeat) return null
+                      // Calculate offset from pot center to winner position
+                      const wTop = parseFloat(winnerSeat.position.top)
+                      const wLeft = parseFloat(winnerSeat.position.left)
+                      return {
+                        targetX: `${wLeft - 50}vw`,
+                        targetY: `${(wTop - 28) * 0.75}vh`,
+                      }
+                    })()
+                  : null
+              }
+            />
           </div>
         )}
+
+        {/* Bet chip piles — between each player and center */}
+        {seatMap.map(({ seatIndex, position }) => {
+          const hand = handsMap.get(seatIndex)
+          const bet = hand?.bet ?? 0
+          if (bet <= 0) return null
+          const betPos = getBetPosition(position)
+          const isAnimating = betAnimations.get(seatIndex) ?? false
+          return (
+            <ChipPile
+              key={`bet-${seatIndex}`}
+              amount={bet}
+              seatIndex={seatIndex}
+              animate={isAnimating ? 'push-in' : null}
+              position={{ x: betPos.left, y: betPos.top }}
+            />
+          )
+        })}
 
         {/* Community cards with staggered deal animation */}
         <div className="absolute top-[42%] left-1/2 -translate-x-1/2 flex gap-1.5 z-10">

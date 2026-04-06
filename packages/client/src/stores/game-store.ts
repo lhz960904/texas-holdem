@@ -29,6 +29,10 @@ interface GameState {
   settleShowCards: boolean
   revealedCards: Map<number, [Card, Card]>
 
+  // Animations
+  lastAction: { seatIndex: number; type: string } | null
+  potCollectTarget: number | null // seat index of winner for chip fly animation
+
   // Screen
   screen: Screen
 }
@@ -45,6 +49,7 @@ interface GameActions {
   showCards: () => void
   leaveRoom: () => void
   clearSettle: () => void
+  clearAnimations: () => void
 }
 
 const STORAGE_KEY = 'texas-holdem-session'
@@ -87,6 +92,8 @@ const initialState: GameState = {
   settleWinners: [],
   settleShowCards: false,
   revealedCards: new Map(),
+  lastAction: null,
+  potCollectTarget: null,
   screen: 'lobby',
 }
 
@@ -162,6 +169,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           showdownResults: [],
           settleWinners: [],
           settleShowCards: false,
+          lastAction: null,
+          potCollectTarget: null,
           revealedCards: new Map(),
           room: {
             ...state.room,
@@ -233,7 +242,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       })
     })
 
-    wsClient.on('player-action', ({ type, pot }) => {
+    wsClient.on('player-action', ({ seatIndex, type, pot }) => {
       if (type === 'fold') {
         sounds.play('fold')
       } else if (type === 'check') {
@@ -245,6 +254,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       set((state) => {
         if (!state.room?.game) return {}
         return {
+          lastAction: { seatIndex, type },
           room: {
             ...state.room,
             game: { ...state.room.game, pot },
@@ -259,7 +269,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     wsClient.on('settle', ({ winners, showCards }) => {
       sounds.play('win')
-      set({ settleWinners: winners, settleShowCards: showCards })
+      const winnerSeat = winners.length > 0 ? winners[0].seatIndex : null
+      set({ settleWinners: winners, settleShowCards: showCards, potCollectTarget: winnerSeat })
     })
 
     wsClient.on('cards-revealed', ({ seatIndex, cards }) => {
@@ -349,6 +360,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       showdownResults: [],
       settleWinners: [],
       settleShowCards: false,
+      potCollectTarget: null,
     })
+  },
+
+  clearAnimations: () => {
+    set({ lastAction: null, potCollectTarget: null })
   },
 }))
