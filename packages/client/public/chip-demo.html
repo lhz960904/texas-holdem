@@ -3,515 +3,442 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chip Animation Demo</title>
+<title>Chip Demo v3 — U-Table + Responsive</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#080f08; font-family:-apple-system,sans-serif; color:#fff; overflow:hidden; height:100vh; }
 
-/* Table */
-.table-container { position:relative; width:100%; height:75vh; }
+/* ====== TABLE ====== */
+.table-container {
+  position:relative; width:100%; height:75vh;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* U-shaped table: rounded rectangle, NOT ellipse */
 .felt {
-  position:absolute; top:6%; left:6%; right:6%; bottom:4%;
-  background: radial-gradient(ellipse at center, rgba(255,255,255,0.06) 0%, transparent 60%),
-              radial-gradient(ellipse at center, #1e6b3a 0%, #145228 50%, #0d3a1c 100%);
-  border-radius:50%; border:10px solid #3a2510;
-  box-shadow: inset 0 0 80px rgba(0,0,0,0.4), 0 0 0 4px #2a1a08, 0 0 60px rgba(0,0,0,0.6);
+  position:absolute;
+  /* Leave room for avatars outside */
+  top: 12%; left: 10%; right: 10%; bottom: 8%;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at center, #1e6b3a 0%, #145228 50%, #0d3a1c 100%);
+  /* U-shape: large border-radius but NOT 50% — more like a rounded rectangle */
+  border-radius: 40% / 50%;
+  border: 8px solid #3a2510;
+  box-shadow:
+    inset 0 0 60px rgba(0,0,0,0.4),
+    0 0 0 3px #2a1a08,
+    0 0 40px rgba(0,0,0,0.5);
 }
-.felt::before { content:''; position:absolute; inset:12px; border-radius:50%; border:1.5px solid rgba(255,255,255,0.06); }
-
-/* Pot */
-.pot { position:absolute; top:28%; left:50%; transform:translateX(-50%); z-index:10;
-  padding:6px 20px; border-radius:20px; background:rgba(0,0,0,0.6); border:1px solid rgba(255,215,0,0.3);
-  font-size:15px; color:#ffd700; font-weight:700; letter-spacing:1px; transition: all 0.3s;
+.felt::before {
+  content:''; position:absolute; inset:10px;
+  border-radius: 38% / 48%;
+  border:1.5px solid rgba(255,255,255,0.05);
 }
 
-/* Community cards */
-.community { position:absolute; top:40%; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:10; }
-.card { width:44px; height:64px; border-radius:6px; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; font-weight:700; box-shadow:2px 3px 10px rgba(0,0,0,0.5); }
+/* ====== PLAYER SEAT ====== */
+/* Avatar is OUTSIDE the table, cards + chips are INSIDE */
+.seat {
+  position:absolute; z-index:5;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+}
+.seat .avatar {
+  width:40px; height:40px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; border:2px solid rgba(255,255,255,0.3);
+  flex-shrink:0;
+}
+.seat .player-info {
+  text-align:center;
+}
+.seat .player-name { font-size:10px; text-shadow:0 1px 2px rgba(0,0,0,0.8); white-space:nowrap; }
+.seat .player-chips {
+  font-size:10px; color:#ffd700; font-weight:700;
+  transition: all 0.5s ease;
+}
+/* Chips increase flash */
+.seat .player-chips.increased {
+  animation: chipsIncrease 0.8s ease;
+}
+@keyframes chipsIncrease {
+  0% { transform: scale(1); color: #ffd700; }
+  30% { transform: scale(1.4); color: #fff; }
+  100% { transform: scale(1); color: #ffd700; }
+}
+
+.seat.active .avatar {
+  box-shadow:0 0 0 3px #ffd700, 0 0 16px rgba(255,215,0,0.4);
+  animation: pulseRing 1.5s ease-in-out infinite;
+}
+.seat.folded { opacity:0.3; }
+
+@keyframes pulseRing {
+  0%,100% { box-shadow:0 0 0 3px #ffd700, 0 0 12px rgba(255,215,0,0.3); }
+  50% { box-shadow:0 0 0 3px #ffd700, 0 0 22px rgba(255,215,0,0.5); }
+}
+
+/* Cards area — positioned INSIDE the table */
+.card-area {
+  position:absolute; z-index:10;
+  display:flex; gap:3px; justify-content:center;
+}
+.card {
+  width:36px; height:52px; border-radius:5px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; font-weight:700;
+  box-shadow:1px 2px 8px rgba(0,0,0,0.5);
+}
 .card.up { background:linear-gradient(145deg,#fff,#f4f4f4); }
 .card.up.red { color:#d32f2f; }
 .card.up.black { color:#1a1a2e; }
 .card.down { background:linear-gradient(145deg,#1a2d5a,#0d1a3a); border:1px solid #2a4080; }
-.card .rank { font-size:15px; }
-.card .suit { font-size:13px; margin-top:-2px; }
+.card .rank { font-size:13px; }
+.card .suit { font-size:11px; margin-top:-2px; }
 
-/* Player */
-.player { position:absolute; text-align:center; transform:translate(-50%,-50%); z-index:5; }
-.avatar { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  font-size:22px; margin:0 auto; border:2px solid rgba(255,255,255,0.3); }
-.player-name { font-size:11px; margin-top:3px; text-shadow:0 1px 3px rgba(0,0,0,0.8); }
-.player-chips-text { font-size:10px; color:#ffd700; font-weight:600; }
-.player.active .avatar { box-shadow:0 0 0 3px #ffd700, 0 0 20px rgba(255,215,0,0.4);
-  animation: pulseRing 1.5s ease-in-out infinite; }
-.player-cards { display:flex; gap:2px; justify-content:center; margin-bottom:4px; }
-.player-cards .card { width:32px; height:44px; }
-.player-cards .card .rank { font-size:11px; }
-.player-cards .card .suit { font-size:10px; }
-
-@keyframes pulseRing {
-  0%,100% { box-shadow:0 0 0 3px #ffd700, 0 0 15px rgba(255,215,0,0.3); }
-  50% { box-shadow:0 0 0 3px #ffd700, 0 0 25px rgba(255,215,0,0.5); }
-}
-
-/* ====== CHIP SYSTEM ====== */
-
-/* Single chip */
-.chip {
-  width:22px; height:22px; border-radius:50%; position:absolute;
-  border:2.5px dashed rgba(255,255,255,0.5);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.3), 0 2px 0 rgba(0,0,0,0.2);
-  transition: all 0.3s ease;
-}
-.chip.gold { background:linear-gradient(135deg,#ffd700,#ff8c00); }
-.chip.black { background:#2c3e50; }
-.chip.green { background:#27ae60; }
-.chip.red { background:#c0392b; }
-.chip.blue { background:#2980b9; }
-
-/* Bet area — chips scattered between player and center */
+/* Bet area — INSIDE the table, between player and center */
 .bet-area {
   position:absolute; transform:translate(-50%,-50%); z-index:8;
   width:60px; height:40px;
 }
 .bet-area .chip-group { position:relative; width:100%; height:100%; }
-.bet-amount { position:absolute; bottom:-16px; left:50%; transform:translateX(-50%);
-  font-size:11px; color:#ffd700; font-weight:700; white-space:nowrap;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+.bet-amount {
+  position:absolute; bottom:-14px; left:50%; transform:translateX(-50%);
+  font-size:10px; color:#ffd700; font-weight:700; white-space:nowrap;
+  text-shadow:0 1px 3px rgba(0,0,0,0.8);
+}
 
-/* ====== ANIMATIONS ====== */
+/* ====== CHIPS ====== */
+.chip {
+  width:20px; height:20px; border-radius:50%; position:absolute;
+  border:2px dashed rgba(255,255,255,0.45);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.3), 0 2px 0 rgba(0,0,0,0.15);
+}
+.chip.gold { background:linear-gradient(135deg,#ffd700,#ff8c00); }
+.chip.black-c { background:#2c3e50; }
+.chip.green { background:#27ae60; }
+.chip.red { background:#c0392b; }
+.chip.blue { background:#2980b9; }
 
-/* Chip slides from player to bet area */
-@keyframes chipPushOut {
-  0% { transform: translate(var(--from-x,0), var(--from-y,0)) scale(1.3); opacity:0.4; }
-  60% { opacity:1; }
+/* Push in from player direction */
+@keyframes chipPush {
+  0% { transform: translate(var(--fx,0), var(--fy,0)) rotate(var(--r,0deg)) scale(1.2); opacity:0; }
+  40% { opacity:1; }
+  100% { transform: translate(0,0) rotate(var(--r,0deg)) scale(1); opacity:1; }
+}
+.chip.pushing { animation: chipPush 0.45s ease-out both; }
+
+/* Fly to pot */
+@keyframes toPot {
+  0% { transform:translate(0,0) scale(1); opacity:1; }
+  100% { transform:translate(var(--tpx,0),var(--tpy,0)) scale(0.4); opacity:0; }
+}
+.bet-area.to-pot .chip-group { animation: toPot 0.5s ease-in both; }
+
+/* Fly from pot to winner */
+@keyframes flyToWinner {
+  0% { transform: translate(var(--sx,0), var(--sy,0)) scale(0.3); opacity:0; }
+  30% { opacity:1; }
   100% { transform: translate(0,0) scale(1); opacity:1; }
 }
 
-/* All bet chips slide to pot center on phase change */
-@keyframes chipsToPot {
-  0% { transform: translate(0,0) scale(1); opacity:1; }
-  100% { transform: translate(var(--to-pot-x,0), var(--to-pot-y,0)) scale(0.5); opacity:0; }
+/* Winner glow */
+@keyframes winGlow {
+  0%,100% { box-shadow:0 0 0 3px #ffd700, 0 0 15px rgba(255,215,0,0.3); }
+  50% { box-shadow:0 0 0 5px #ffd700, 0 0 35px rgba(255,215,0,0.6); }
+}
+.seat.winner .avatar { animation: winGlow 1s ease-in-out 3; }
+
+@keyframes dealIn {
+  from { transform:translateY(-25px) scale(0.7); opacity:0; }
+  to { transform:translateY(0) scale(1); opacity:1; }
 }
 
-/* Pot chips fly to winner */
-@keyframes chipsToWinner {
-  0% { transform: translate(0,0) scale(1); opacity:1; }
-  40% { transform: translate(calc(var(--to-winner-x,0) * 0.3), calc(var(--to-winner-y,0) * 0.5)) scale(1.2); opacity:1; }
-  100% { transform: translate(var(--to-winner-x,0), var(--to-winner-y,0)) scale(0.6); opacity:0; }
+/* ====== POT ====== */
+.pot {
+  position:absolute; top:26%; left:50%; transform:translateX(-50%); z-index:12;
+  padding:5px 18px; border-radius:16px;
+  background:rgba(0,0,0,0.55); border:1px solid rgba(255,215,0,0.25);
+  font-size:14px; color:#ffd700; font-weight:700; letter-spacing:0.5px;
+  transition: opacity 0.5s;
 }
 
-/* Winner celebration glow */
-@keyframes winnerGlow {
-  0% { box-shadow: 0 0 0 3px #ffd700, 0 0 20px rgba(255,215,0,0.3); }
-  25% { box-shadow: 0 0 0 5px #ffd700, 0 0 40px rgba(255,215,0,0.6), 0 0 80px rgba(255,215,0,0.2); }
-  50% { box-shadow: 0 0 0 3px #ffd700, 0 0 30px rgba(255,215,0,0.5); }
-  75% { box-shadow: 0 0 0 6px #ffd700, 0 0 50px rgba(255,215,0,0.7), 0 0 100px rgba(255,215,0,0.3); }
-  100% { box-shadow: 0 0 0 3px #ffd700, 0 0 20px rgba(255,215,0,0.3); }
+/* Community */
+.community {
+  position:absolute; top:38%; left:50%; transform:translateX(-50%);
+  display:flex; gap:5px; z-index:11;
 }
 
-/* Flying chip particles for win */
-@keyframes chipRain {
-  0% { transform: translate(0,0) rotate(0deg) scale(1); opacity:1; }
-  100% { transform: translate(var(--rain-x,0), var(--rain-y,-200px)) rotate(var(--rain-rot,360deg)) scale(0.3); opacity:0; }
+/* Phase */
+.phase-label {
+  position:absolute; top:52%; left:50%; transform:translateX(-50%); z-index:11;
+  font-size:9px; color:rgba(255,255,255,0.2); text-transform:uppercase; letter-spacing:3px;
 }
 
-.bet-area.pushing .chip { animation: chipPushOut 0.5s ease-out both; }
-.bet-area.to-pot .chip-group { animation: chipsToPot 0.6s ease-in both; }
-.pot.collecting { animation: chipsToWinner 0.8s ease-in-out both; }
-.player.winner .avatar { animation: winnerGlow 1.5s ease-in-out 2; }
-
-/* Chip rain particles */
-.chip-particle {
-  position:absolute; width:16px; height:16px; border-radius:50%;
-  border:2px dashed rgba(255,255,255,0.4);
-  animation: chipRain 1.2s ease-out both;
-}
-
-/* Controls */
+/* ====== CONTROLS ====== */
 .controls {
   position:fixed; bottom:0; left:0; right:0; height:25vh;
-  background:rgba(0,0,0,0.9); border-top:1px solid rgba(255,255,255,0.1);
-  display:flex; align-items:center; justify-content:center; gap:12px; padding:0 20px;
+  background:rgba(0,0,0,0.92); border-top:1px solid rgba(255,255,255,0.08);
+  display:flex; align-items:center; justify-content:center; gap:8px; padding:0 16px; flex-wrap:wrap;
 }
-.btn {
-  padding:10px 24px; border-radius:10px; font-size:14px; font-weight:700;
-  cursor:pointer; border:none; transition:all 0.2s;
-}
+.btn { padding:8px 16px; border-radius:8px; font-size:12px; font-weight:700;
+  cursor:pointer; border:none; transition:all 0.15s; }
 .btn:hover { transform:scale(1.05); }
 .btn:active { transform:scale(0.95); }
-.btn-call { background:#2563eb; color:#fff; }
-.btn-raise { background:linear-gradient(135deg,#ffd700,#ff8c00); color:#000; }
-.btn-fold { background:#555; color:#ccc; }
-.btn-allin { background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; }
-.btn-reset { background:#333; color:#aaa; border:1px solid #555; }
+.btn-a { background:#2563eb; color:#fff; }
+.btn-b { background:linear-gradient(135deg,#ffd700,#ff8c00); color:#000; }
+.btn-c { background:#555; color:#ccc; }
+.btn-d { background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; }
+.btn-r { background:#222; color:#777; border:1px solid #444; }
+.step-label { position:fixed; top:8px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,0.8); padding:5px 16px; border-radius:16px;
+  font-size:12px; color:#ffd700; z-index:100; border:1px solid rgba(255,215,0,0.15); }
 
-.step-label {
-  position:fixed; top:10px; left:50%; transform:translateX(-50%);
-  background:rgba(0,0,0,0.8); padding:6px 20px; border-radius:20px;
-  font-size:13px; color:#ffd700; z-index:100; border:1px solid rgba(255,215,0,0.2);
-  transition: all 0.3s;
+/* ====== RESPONSIVE ====== */
+@media (max-width: 600px) {
+  .felt { top:14%; left:4%; right:4%; bottom:6%; }
+  .seat .avatar { width:32px; height:32px; font-size:16px; }
+  .seat .player-name { font-size:8px; }
+  .seat .player-chips { font-size:8px; }
+  .card { width:28px; height:40px; }
+  .card .rank { font-size:10px; }
+  .card .suit { font-size:9px; }
+  .chip { width:16px; height:16px; border-width:1.5px; }
+  .pot { font-size:12px; padding:4px 12px; }
+}
+@media (max-width: 400px) {
+  .felt { top:16%; left:2%; right:2%; bottom:6%; }
+  .seat .avatar { width:28px; height:28px; font-size:14px; }
 }
 </style>
 </head>
 <body>
 
-<div class="step-label" id="stepLabel">点击按钮开始演示</div>
+<div class="step-label" id="stepLabel">点击按钮依次演示</div>
 
-<div class="table-container">
-  <div class="felt"></div>
+<div class="table-container" id="tableContainer">
+  <div class="felt" id="felt"></div>
 
-  <!-- Pot -->
   <div class="pot" id="pot" style="opacity:0;">POT 0</div>
-
-  <!-- Community cards -->
   <div class="community" id="community"></div>
+  <div class="phase-label" id="phase"></div>
 
-  <!-- Player 1 (self, bottom) -->
-  <div class="player active" id="p1" style="top:78%; left:50%;">
-    <div class="player-cards">
-      <div class="card up red" style="transform:rotate(-3deg);"><span class="rank">A</span><span class="suit">♥</span></div>
-      <div class="card up black" style="transform:rotate(3deg);"><span class="rank">K</span><span class="suit">♠</span></div>
-    </div>
+  <!-- SEAT 1 (self, bottom center) — avatar BELOW table edge -->
+  <div class="seat active" id="s1" style="bottom:2%; left:50%; transform:translateX(-50%);">
     <div class="avatar" style="background:#e67e22;">🐺</div>
-    <div class="player-name">Haoze (我)</div>
-    <div class="player-chips-text" id="p1chips">$1,000</div>
+    <div class="player-info">
+      <div class="player-name">Haoze</div>
+      <div class="player-chips" id="s1chips">1,000</div>
+    </div>
+  </div>
+  <!-- S1 cards INSIDE table -->
+  <div class="card-area" id="s1cards" style="bottom:18%; left:50%; transform:translateX(-50%);">
+    <div class="card up red" style="transform:rotate(-4deg);"><span class="rank">A</span><span class="suit">♥</span></div>
+    <div class="card up black" style="transform:rotate(4deg);"><span class="rank">K</span><span class="suit">♠</span></div>
   </div>
 
-  <!-- Player 2 (top) -->
-  <div class="player" id="p2" style="top:8%; left:50%;">
-    <div class="player-cards">
-      <div class="card down" style="transform:rotate(-3deg);"></div>
-      <div class="card down" style="transform:rotate(3deg);"></div>
+  <!-- SEAT 2 (top center) — avatar ABOVE table edge -->
+  <div class="seat" id="s2" style="top:0%; left:50%; transform:translateX(-50%);">
+    <div class="player-info" style="order:2;">
+      <div class="player-name">Alex</div>
+      <div class="player-chips" id="s2chips">1,000</div>
     </div>
-    <div class="avatar" style="background:#3498db;">🦊</div>
-    <div class="player-name">Alex</div>
-    <div class="player-chips-text" id="p2chips">$1,000</div>
+    <div class="avatar" style="background:#3498db; order:1;">🦊</div>
+  </div>
+  <div class="card-area" id="s2cards" style="top:16%; left:50%; transform:translateX(-50%);">
+    <div class="card down" style="transform:rotate(-4deg);"></div>
+    <div class="card down" style="transform:rotate(4deg);"></div>
   </div>
 
-  <!-- Player 3 (left) -->
-  <div class="player" id="p3" style="top:45%; left:6%;">
-    <div class="player-cards">
-      <div class="card down" style="transform:rotate(-3deg);"></div>
-      <div class="card down" style="transform:rotate(3deg);"></div>
-    </div>
+  <!-- SEAT 3 (left) — avatar LEFT of table edge -->
+  <div class="seat" id="s3" style="top:45%; left:1%; transform:translateY(-50%); flex-direction:row;">
     <div class="avatar" style="background:#9b59b6;">🐱</div>
-    <div class="player-name">Jenny</div>
-    <div class="player-chips-text" id="p3chips">$1,000</div>
-  </div>
-
-  <!-- Player 4 (right) -->
-  <div class="player" id="p4" style="top:45%; left:94%;">
-    <div class="player-cards">
-      <div class="card down" style="transform:rotate(-3deg);"></div>
-      <div class="card down" style="transform:rotate(3deg);"></div>
+    <div class="player-info">
+      <div class="player-name">Jenny</div>
+      <div class="player-chips" id="s3chips">1,000</div>
     </div>
-    <div class="avatar" style="background:#1abc9c;">🐼</div>
-    <div class="player-name">Mike</div>
-    <div class="player-chips-text" id="p4chips">$1,000</div>
+  </div>
+  <div class="card-area" id="s3cards" style="top:45%; left:16%; transform:translateY(-50%);">
+    <div class="card down" style="transform:rotate(-4deg);"></div>
+    <div class="card down" style="transform:rotate(4deg);"></div>
   </div>
 
-  <!-- Bet areas (positioned between player and center) -->
-  <div class="bet-area" id="bet1" style="top:62%; left:50%;"></div>
-  <div class="bet-area" id="bet2" style="top:22%; left:50%;"></div>
-  <div class="bet-area" id="bet3" style="top:42%; left:22%;"></div>
-  <div class="bet-area" id="bet4" style="top:42%; left:78%;"></div>
+  <!-- SEAT 4 (right) — avatar RIGHT of table edge -->
+  <div class="seat" id="s4" style="top:45%; right:1%; transform:translateY(-50%); flex-direction:row-reverse;">
+    <div class="avatar" style="background:#1abc9c;">🐼</div>
+    <div class="player-info">
+      <div class="player-name">Mike</div>
+      <div class="player-chips" id="s4chips">1,000</div>
+    </div>
+  </div>
+  <div class="card-area" id="s4cards" style="top:45%; right:16%; transform:translateY(-50%);">
+    <div class="card down" style="transform:rotate(-4deg);"></div>
+    <div class="card down" style="transform:rotate(4deg);"></div>
+  </div>
+
+  <!-- Bet areas (INSIDE table, between player and center) -->
+  <div class="bet-area" id="b1" style="top:62%; left:50%;"></div>
+  <div class="bet-area" id="b2" style="top:24%; left:50%;"></div>
+  <div class="bet-area" id="b3" style="top:43%; left:26%;"></div>
+  <div class="bet-area" id="b4" style="top:43%; left:74%;"></div>
+
+  <!-- Win chip target -->
+  <div id="winArea" style="position:absolute;z-index:20;pointer-events:none;"></div>
 </div>
 
 <div class="controls">
-  <button class="btn btn-reset" onclick="resetDemo()">重置</button>
-  <button class="btn btn-call" onclick="step1_blinds()">1. 盲注</button>
-  <button class="btn btn-call" onclick="step2_call()">2. P1 跟注</button>
-  <button class="btn btn-raise" onclick="step3_raise()">3. P3 加注</button>
-  <button class="btn btn-call" onclick="step4_allCall()">4. 全部跟注</button>
-  <button class="btn btn-fold" onclick="step5_flop()">5. 翻牌</button>
-  <button class="btn btn-fold" onclick="step6_fold()">6. P4 弃牌</button>
-  <button class="btn btn-allin" onclick="step7_settle()">7. 结算(P1赢)</button>
+  <button class="btn btn-r" onclick="resetDemo()">重置</button>
+  <button class="btn btn-a" onclick="step1()">1.盲注</button>
+  <button class="btn btn-a" onclick="step2()">2.P1跟注</button>
+  <button class="btn btn-b" onclick="step3()">3.P3加注60</button>
+  <button class="btn btn-a" onclick="step4()">4.全部跟注</button>
+  <button class="btn btn-c" onclick="step5()">5.翻牌</button>
+  <button class="btn btn-c" onclick="step6()">6.P4弃牌</button>
+  <button class="btn btn-d" onclick="step7()">7.结算P1赢</button>
 </div>
 
-<!-- Chip rain container -->
-<div id="chipRain" style="position:fixed;inset:0;pointer-events:none;z-index:100;"></div>
-
 <script>
-// Seeded random for consistent chip scatter
-function srand(seed) {
-  const x = Math.sin(seed * 9301 + 49297) * 233280;
-  return x - Math.floor(x);
+function srand(s){const x=Math.sin(s*9301+49297)*233280;return x-Math.floor(x);}
+function getChips(a){
+  const c=[];const d=[{v:1000,c:'gold'},{v:100,c:'black-c'},{v:25,c:'green'},{v:5,c:'red'},{v:1,c:'blue'}];
+  let r=a;for(const i of d){const n=Math.min(Math.floor(r/i.v),3);for(let j=0;j<n;j++)c.push(i.c);r-=n*i.v;}
+  if(!c.length&&a>0)c.push('blue');return c.slice(0,8);
 }
 
-// Break amount into chip denominations
-function getChips(amount) {
-  const chips = [];
-  const denoms = [
-    { value:1000, cls:'gold' },
-    { value:100, cls:'black' },
-    { value:25, cls:'green' },
-    { value:5, cls:'red' },
-    { value:1, cls:'blue' },
-  ];
-  let rem = amount;
-  for (const d of denoms) {
-    const count = Math.min(Math.floor(rem / d.value), 3);
-    for (let i = 0; i < count; i++) chips.push(d.cls);
-    rem -= count * d.value;
-  }
-  if (chips.length === 0 && amount > 0) chips.push('blue');
-  return chips.slice(0, 6);
-}
+// Push directions (from player toward bet area)
+const DIR={b1:{x:0,y:55},b2:{x:0,y:-55},b3:{x:-55,y:0},b4:{x:55,y:0}};
+const bets={b1:0,b2:0,b3:0,b4:0};
 
-// Render scattered chips in a bet area
-function renderBetChips(betEl, amount, seed, animate) {
-  const chips = getChips(amount);
-  const group = document.createElement('div');
-  group.className = 'chip-group';
-
-  chips.forEach((cls, i) => {
-    const chip = document.createElement('div');
-    chip.className = `chip ${cls}`;
-    // Scatter position
-    const rx = (srand(seed + i * 7) - 0.5) * 30;
-    const ry = (srand(seed + i * 13) - 0.5) * 20;
-    const rot = (srand(seed + i * 19) - 0.5) * 30;
-    chip.style.left = `${20 + rx}px`;
-    chip.style.top = `${10 + ry}px`;
-    chip.style.transform = `rotate(${rot}deg)`;
-    chip.style.zIndex = i;
-
-    if (animate) {
-      // Push from player direction
-      const playerDir = betEl.dataset.dir || '0,-40';
-      const [dx, dy] = playerDir.split(',');
-      chip.style.setProperty('--from-x', `${dx}px`);
-      chip.style.setProperty('--from-y', `${dy}px`);
-      chip.style.animationDelay = `${i * 0.08}s`;
-    }
-    group.appendChild(chip);
+function addChips(bid,total,seed){
+  const el=document.getElementById(bid);
+  const prev=bets[bid];const added=total-prev;bets[bid]=total;
+  if(added<=0)return;
+  let g=el.querySelector('.chip-group');
+  if(!g){g=document.createElement('div');g.className='chip-group';g.style.cssText='position:relative;width:100%;height:100%';el.appendChild(g);}
+  const ec=g.querySelectorAll('.chip').length;
+  const nc=getChips(added);const dir=DIR[bid];
+  nc.forEach((cls,i)=>{
+    const idx=ec+i;const ch=document.createElement('div');
+    ch.className=`chip ${cls} pushing`;
+    const rx=(srand(seed+idx*7)-0.5)*28;const ry=(srand(seed+idx*13)-0.5)*18;
+    const rot=(srand(seed+idx*19)-0.5)*30;const sy=Math.floor(idx/2)*-2;
+    ch.style.left=`${20+rx}px`;ch.style.top=`${12+ry+sy}px`;
+    ch.style.setProperty('--r',`${rot}deg`);
+    ch.style.setProperty('--fx',`${dir.x}px`);ch.style.setProperty('--fy',`${dir.y}px`);
+    ch.style.animationDelay=`${i*0.05}s`;ch.style.zIndex=idx;
+    g.appendChild(ch);
   });
-
-  // Amount label
-  const label = document.createElement('div');
-  label.className = 'bet-amount';
-  label.textContent = amount.toLocaleString();
-
-  betEl.innerHTML = '';
-  betEl.appendChild(group);
-  betEl.appendChild(label);
-
-  if (animate) betEl.classList.add('pushing');
-  setTimeout(() => betEl.classList.remove('pushing'), 600);
+  let lb=el.querySelector('.bet-amount');
+  if(!lb){lb=document.createElement('div');lb.className='bet-amount';el.appendChild(lb);}
+  lb.textContent=total.toLocaleString();
 }
 
-// Clear bet area
-function clearBet(betEl) { betEl.innerHTML = ''; }
+function clearBet(id){document.getElementById(id).innerHTML='';bets[id]=0;}
+function setPot(a){const p=document.getElementById('pot');p.textContent=`POT ${a.toLocaleString()}`;p.style.opacity=a>0?'1':'0';}
+function setPhase(t){document.getElementById('phase').textContent=t;}
+function setLabel(t){document.getElementById('stepLabel').textContent=t;}
 
-// Set push direction for each bet area (from player toward center)
-// Direction: where the chips come FROM (player's side relative to bet area)
-// P1 is below bet area → chips come from below (+y)
-document.getElementById('bet1').dataset.dir = '0,60';
-// P2 is above bet area → chips come from above (-y)
-document.getElementById('bet2').dataset.dir = '0,-60';
-// P3 is left of bet area → chips come from left (-x)
-document.getElementById('bet3').dataset.dir = '-60,0';
-// P4 is right of bet area → chips come from right (+x)
-document.getElementById('bet4').dataset.dir = '60,0';
-
-let potAmount = 0;
-
-function setPot(amount) {
-  potAmount = amount;
-  const pot = document.getElementById('pot');
-  pot.textContent = `POT ${amount.toLocaleString()}`;
-  pot.style.opacity = amount > 0 ? '1' : '0';
+function animateChipsValue(elId, newVal) {
+  const el = document.getElementById(elId);
+  el.textContent = newVal.toLocaleString();
+  el.classList.remove('increased');
+  void el.offsetWidth; // force reflow
+  el.classList.add('increased');
 }
 
-function setLabel(text) {
-  document.getElementById('stepLabel').textContent = text;
+function resetDemo(){
+  ['b1','b2','b3','b4'].forEach(clearBet);setPot(0);setPhase('');
+  document.getElementById('community').innerHTML='';
+  document.getElementById('winArea').innerHTML='';
+  ['s1','s2','s3','s4'].forEach(id=>{const e=document.getElementById(id);e.classList.remove('winner','folded');e.style.opacity='1';});
+  document.getElementById('s1').classList.add('active');
+  ['s1chips','s2chips','s3chips','s4chips'].forEach(id=>document.getElementById(id).textContent='1,000');
+  setLabel('点击按钮依次演示');
 }
 
-// ========== DEMO STEPS ==========
-
-function resetDemo() {
-  ['bet1','bet2','bet3','bet4'].forEach(id => clearBet(document.getElementById(id)));
-  setPot(0);
-  document.getElementById('community').innerHTML = '';
-  document.getElementById('chipRain').innerHTML = '';
-  ['p1','p2','p3','p4'].forEach(id => {
-    document.getElementById(id).classList.remove('winner');
-    document.getElementById(id).style.opacity = '1';
-  });
-  document.getElementById('p1').classList.add('active');
-  document.getElementById('p1chips').textContent = '$1,000';
-  document.getElementById('p2chips').textContent = '$1,000';
-  document.getElementById('p3chips').textContent = '$1,000';
-  document.getElementById('p4chips').textContent = '$1,000';
-  setLabel('点击按钮开始演示');
+function step1(){
+  setLabel('1️⃣ 盲注');setPhase('preflop');
+  addChips('b3',10,30);document.getElementById('s3chips').textContent='990';
+  setTimeout(()=>{addChips('b4',20,40);document.getElementById('s4chips').textContent='980';setPot(30);},250);
 }
-
-function step1_blinds() {
-  setLabel('1️⃣ 盲注: P3小盲10, P4大盲20 — 筹码推向桌面');
-  // P3 posts SB = 10
-  renderBetChips(document.getElementById('bet3'), 10, 30, true);
-  document.getElementById('p3chips').textContent = '$990';
-  // P4 posts BB = 20 (slight delay)
-  setTimeout(() => {
-    renderBetChips(document.getElementById('bet4'), 20, 40, true);
-    document.getElementById('p4chips').textContent = '$980';
-    setPot(30);
-  }, 300);
+function step2(){
+  setLabel('2️⃣ P1跟注20, P2跟注20');
+  addChips('b1',20,10);document.getElementById('s1chips').textContent='980';setPot(50);
+  setTimeout(()=>{addChips('b2',20,20);document.getElementById('s2chips').textContent='980';setPot(70);},500);
 }
-
-function step2_call() {
-  setLabel('2️⃣ P1(Haoze)跟注20 — 筹码从下方推出');
-  renderBetChips(document.getElementById('bet1'), 20, 10, true);
-  document.getElementById('p1chips').textContent = '$980';
-  setPot(50);
-  // P2 also calls
-  setTimeout(() => {
-    setLabel('2️⃣ P2(Alex)跟注20 — 筹码从上方推出');
-    renderBetChips(document.getElementById('bet2'), 20, 20, true);
-    document.getElementById('p2chips').textContent = '$980';
-    setPot(70);
-  }, 800);
+function step3(){
+  setLabel('3️⃣ P3加注到60（累加筹码）');
+  addChips('b3',60,35);document.getElementById('s3chips').textContent='940';setPot(120);
 }
-
-function step3_raise() {
-  setLabel('3️⃣ P3(Jenny)加注到60 — 追加筹码推出');
-  renderBetChips(document.getElementById('bet3'), 60, 31, true);
-  document.getElementById('p3chips').textContent = '$940';
-  setPot(120);
+function step4(){
+  setLabel('4️⃣ 全部跟注60');
+  addChips('b1',60,15);document.getElementById('s1chips').textContent='940';
+  setTimeout(()=>{addChips('b2',60,25);document.getElementById('s2chips').textContent='940';},250);
+  setTimeout(()=>{addChips('b4',60,45);document.getElementById('s4chips').textContent='940';setPot(240);},500);
 }
-
-function step4_allCall() {
-  setLabel('4️⃣ 全部跟注60 — 各方筹码更新');
-  // P1 calls to 60 (add 40 more)
-  renderBetChips(document.getElementById('bet1'), 60, 11, true);
-  document.getElementById('p1chips').textContent = '$940';
-
-  setTimeout(() => {
-    renderBetChips(document.getElementById('bet2'), 60, 21, true);
-    document.getElementById('p2chips').textContent = '$940';
-  }, 300);
-
-  setTimeout(() => {
-    renderBetChips(document.getElementById('bet4'), 60, 41, true);
-    document.getElementById('p4chips').textContent = '$940';
-    setPot(240);
-  }, 600);
-}
-
-function step5_flop() {
-  setLabel('5️⃣ 翻牌 — 所有下注筹码收入底池，公共牌翻出');
-
-  // Animate all bet chips flying to pot center
-  ['bet1','bet2','bet3','bet4'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el.querySelector('.chip-group')) {
-      // Calculate direction to pot
-      const rect = el.getBoundingClientRect();
-      const potRect = document.getElementById('pot').getBoundingClientRect();
-      const dx = potRect.left - rect.left;
-      const dy = potRect.top - rect.top;
-      el.style.setProperty('--to-pot-x', `${dx}px`);
-      el.style.setProperty('--to-pot-y', `${dy}px`);
+function step5(){
+  setLabel('5️⃣ 翻牌 — 筹码收入底池');setPhase('flop');
+  ['b1','b2','b3','b4'].forEach(id=>{
+    const el=document.getElementById(id);const g=el.querySelector('.chip-group');
+    if(g){
+      const r=el.getBoundingClientRect();const pr=document.getElementById('pot').getBoundingClientRect();
+      el.style.setProperty('--tpx',`${pr.left-r.left}px`);el.style.setProperty('--tpy',`${pr.top-r.top}px`);
       el.classList.add('to-pot');
     }
   });
-
-  // After chips fly to pot, clear bet areas and show flop
-  setTimeout(() => {
-    ['bet1','bet2','bet3','bet4'].forEach(id => {
-      const el = document.getElementById(id);
-      el.classList.remove('to-pot');
-      clearBet(el);
+  setTimeout(()=>{
+    ['b1','b2','b3','b4'].forEach(id=>{document.getElementById(id).classList.remove('to-pot');clearBet(id);});
+    const cm=document.getElementById('community');cm.innerHTML='';
+    [{r:'A',s:'♠',c:'black'},{r:'K',s:'♥',c:'red'},{r:'7',s:'♦',c:'red'}].forEach((cd,i)=>{
+      const d=document.createElement('div');d.className=`card up ${cd.c}`;
+      d.innerHTML=`<span class="rank">${cd.r}</span><span class="suit">${cd.s}</span>`;
+      d.style.animation=`dealIn 0.35s ease-out ${i*0.08}s both`;cm.appendChild(d);
     });
-
-    // Deal flop cards
-    const comm = document.getElementById('community');
-    const cards = [
-      {rank:'A', suit:'♠', color:'black'},
-      {rank:'K', suit:'♥', color:'red'},
-      {rank:'7', suit:'♦', color:'red'},
-    ];
-    comm.innerHTML = '';
-    cards.forEach((c, i) => {
-      const div = document.createElement('div');
-      div.className = `card up ${c.color}`;
-      div.innerHTML = `<span class="rank">${c.rank}</span><span class="suit">${c.suit}</span>`;
-      div.style.animation = `dealIn 0.4s ease-out ${i * 0.1}s both`;
-      comm.appendChild(div);
-    });
-  }, 700);
+  },550);
 }
+function step6(){setLabel('6️⃣ P4弃牌');document.getElementById('s4').classList.add('folded');}
+function step7(){
+  setLabel('7️⃣ P1赢! 筹码飞向赢家');
 
-function step6_fold() {
-  setLabel('6️⃣ P4(Mike)弃牌 — 变灰，筹码保留在下注区');
-  document.getElementById('p4').style.opacity = '0.35';
-  // P4 cards fade
+  const ct=document.getElementById('tableContainer').getBoundingClientRect();
+  const potR=document.getElementById('pot').getBoundingClientRect();
+  const s1R=document.getElementById('s1').getBoundingClientRect();
+  const wx=s1R.left+s1R.width/2-ct.left;
+  const wy=s1R.top-ct.top; // slightly above avatar
+  const px=potR.left+potR.width/2-ct.left;
+  const py=potR.top+potR.height/2-ct.top;
+  const dx=px-wx;const dy=py-wy;
+
+  const wa=document.getElementById('winArea');wa.innerHTML='';
+  wa.style.left=`${wx}px`;wa.style.top=`${wy}px`;
+
+  const colors=['gold','red','green','black-c','blue','gold','red','green'];
+  for(let i=0;i<10;i++){
+    const ch=document.createElement('div');
+    ch.className=`chip ${colors[i%colors.length]}`;
+    const sc=(Math.random()-0.5)*30;
+    ch.style.left=`${sc-10}px`;ch.style.top=`${(Math.random()-0.5)*20-10}px`;
+    ch.style.setProperty('--sx',`${dx+(Math.random()-0.5)*50}px`);
+    ch.style.setProperty('--sy',`${dy+(Math.random()-0.5)*30}px`);
+    ch.style.animation=`flyToWinner 0.5s ease-out ${i*0.04}s both`;
+    ch.style.zIndex=20+i;wa.appendChild(ch);
+  }
+
+  // Fade pot
+  setTimeout(()=>{document.getElementById('pot').style.opacity='0';},200);
+
+  // Chips arrive → fade out + update balance
+  setTimeout(()=>{
+    // Fade chips
+    wa.querySelectorAll('.chip').forEach(c=>{c.style.transition='opacity 0.4s';c.style.opacity='0';});
+    // Winner glow + balance increase
+    const s1=document.getElementById('s1');
+    s1.classList.remove('active');s1.classList.add('winner');
+    animateChipsValue('s1chips', 1180);
+    setLabel('🏆 Haoze 赢得 240!');
+  },700);
+
+  // Cleanup
+  setTimeout(()=>{wa.innerHTML='';},1200);
 }
-
-function step7_settle() {
-  setLabel('7️⃣ 结算: P1(Haoze)赢! — 底池筹码飞向赢家 + 庆祝特效');
-
-  const pot = document.getElementById('pot');
-  const p1 = document.getElementById('p1');
-  const p1rect = p1.getBoundingClientRect();
-  const potRect = pot.getBoundingClientRect();
-  const dx = p1rect.left + p1rect.width/2 - potRect.left - potRect.width/2;
-  const dy = p1rect.top + p1rect.height/2 - potRect.top - potRect.height/2;
-
-  pot.style.setProperty('--to-winner-x', `${dx}px`);
-  pot.style.setProperty('--to-winner-y', `${dy}px`);
-  pot.classList.add('collecting');
-
-  // Spawn flying chip particles from pot to winner
-  setTimeout(() => {
-    const rainEl = document.getElementById('chipRain');
-    rainEl.innerHTML = '';
-    const colors = ['#ffd700','#c0392b','#27ae60','#2c3e50','#2980b9','#ff8c00'];
-
-    for (let i = 0; i < 20; i++) {
-      const p = document.createElement('div');
-      p.className = 'chip-particle';
-      p.style.background = colors[i % colors.length];
-      p.style.left = `${potRect.left + potRect.width/2}px`;
-      p.style.top = `${potRect.top + potRect.height/2}px`;
-
-      // Spread in arc toward winner
-      const spread = (Math.random() - 0.5) * 200;
-      p.style.setProperty('--rain-x', `${dx + spread}px`);
-      p.style.setProperty('--rain-y', `${dy + (Math.random() - 0.5) * 100}px`);
-      p.style.setProperty('--rain-rot', `${Math.random() * 720 - 360}deg`);
-      p.style.animationDelay = `${i * 0.05}s`;
-      p.style.animationDuration = `${0.8 + Math.random() * 0.4}s`;
-
-      rainEl.appendChild(p);
-    }
-  }, 200);
-
-  // Winner glow
-  setTimeout(() => {
-    pot.classList.remove('collecting');
-    pot.style.opacity = '0';
-    p1.classList.remove('active');
-    p1.classList.add('winner');
-    document.getElementById('p1chips').textContent = '$1,180';
-    setLabel('🏆 Haoze 赢得 $240!');
-  }, 900);
-
-  // Cleanup rain
-  setTimeout(() => {
-    document.getElementById('chipRain').innerHTML = '';
-  }, 2500);
-}
-
-// Deal card animation
-const style = document.createElement('style');
-style.textContent = `
-@keyframes dealIn {
-  from { transform: translateY(-30px) scale(0.7); opacity: 0; }
-  to { transform: translateY(0) scale(1); opacity: 1; }
-}`;
-document.head.appendChild(style);
 </script>
 </body>
 </html>
