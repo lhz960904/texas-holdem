@@ -130,6 +130,25 @@ export class RoomManager {
     }
   }
 
+  /** Check if room has any human (non-AI) players */
+  hasHumanPlayers(roomId: string, isAI: (id: string) => boolean): boolean {
+    const room = this.rooms.get(roomId)
+    if (!room) return false
+    for (const p of room.players.values()) {
+      if (!isAI(p.id)) return true
+    }
+    return false
+  }
+
+  /** Force destroy a room and return all player IDs for cleanup */
+  forceDestroyRoom(roomId: string): string[] {
+    const room = this.rooms.get(roomId)
+    if (!room) return []
+    const playerIds = [...room.players.keys()]
+    this.destroyRoom(roomId)
+    return playerIds
+  }
+
   private destroyRoom(roomId: string): void {
     const room = this.rooms.get(roomId)
     if (!room) return

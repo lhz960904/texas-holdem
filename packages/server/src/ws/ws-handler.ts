@@ -112,6 +112,15 @@ export class WsHandler {
     try {
       const { code, nickname, avatar } = data
 
+      // If player is already in a different room, leave it first
+      if (conn.roomId) {
+        const targetRoom = this.roomManager.getRoomByCode(code)
+        if (targetRoom && targetRoom.id !== conn.roomId) {
+          this.leaveAndCleanupRoom(conn.roomId, conn.playerId)
+          conn.roomId = null
+        }
+      }
+
       // Check balance before joining (non-host, non-reconnect)
       const roomRef = this.roomManager.getRoomByCode(code)
       if (!roomRef) {
@@ -472,15 +481,42 @@ export class WsHandler {
   // --- Leave & Show Cards ---
   private onLeaveRoom(_ws: WebSocket, conn: PlayerConnection): void {
     if (!conn.roomId) return
-    const roomId = conn.roomId
+    this.leaveAndCleanupRoom(conn.roomId, conn.playerId)
+    conn.roomId = null
+  }
+
+  /** Leave room and destroy it if no human players remain */
+  private leaveAndCleanupRoom(roomId: string, playerId: string): void {
     const room = this.roomManager.getRoom(roomId)
-    const playerInfo = room?.players.get(conn.playerId)
+    const playerInfo = room?.players.get(playerId)
     const seatIndex = playerInfo?.seatIndex ?? -1
 
-    this.roomManager.leaveRoom(roomId, conn.playerId)
-    conn.roomId = null
+    this.roomManager.leaveRoom(roomId, playerId)
     if (seatIndex >= 0) {
       this.broadcastToRoom(roomId, 'player-left', { seatIndex })
+    }
+
+    // Check if room still exists and has human players
+    this.checkAndDestroyEmptyRoom(roomId)
+  }
+
+  /** Destroy room if no human players remain (only AI left) */
+  private checkAndDestroyEmptyRoom(roomId: string): void {
+    const room = this.roomManager.getRoom(roomId)
+    if (!room) return
+
+    const hasHumans = this.roomManager.hasHumanPlayers(roomId, (id) => this.aiManager.isAI(id))
+    if (!hasHumans) {
+      console.log(`[Room] No human players in room ${room.code}, destroying...`)
+      this.clearTurnTimer(roomId)
+      // Clean up all AI in this room
+      const playerIds = this.roomManager.forceDestroyRoom(roomId)
+      for (const id of playerIds) {
+        if (this.aiManager.isAI(id)) {
+          this.aiManager.removeAI(roomId, id)
+        }
+      }
+      this.actionHistory.delete(roomId)
     }
   }
 
@@ -507,11 +543,11 @@ export class WsHandler {
         const playerInfo = room.players.get(conn.playerId)
         if (playerInfo) {
           if (room.status === 'waiting') {
-            const seatIndex = playerInfo.seatIndex
-            this.roomManager.leaveRoom(conn.roomId, conn.playerId)
-            this.broadcastToRoom(conn.roomId, 'player-left', { seatIndex })
+            this.leaveAndCleanupRoom(conn.roomId, conn.playerId)
           } else {
             playerInfo.isConnected = false
+            // Even during game, check if all humans disconnected
+            this.checkAndDestroyEmptyRoom(conn.roomId)
           }
         }
       }
@@ -631,11 +667,16 @@ export class WsHandler {
         if (!this.aiManager.isAI(id)) {
           const playerWs = this.playerSockets.get(id)
           if (playerWs) {
-            const conn = this.connections.get(playerWs)
-            if (conn) conn.roomId = null
+            const connRef = this.connections.get(playerWs)
+            if (connRef) connRef.roomId = null
           }
         }
       }
+
+      // Check if room should be destroyed (no humans left after kicks)
+      if (!this.roomManager.getRoom(roomId)) return
+      this.checkAndDestroyEmptyRoom(roomId)
+      if (!this.roomManager.getRoom(roomId)) return // destroyed
 
       this.checkAutoStart(roomId)
     }, 3000)
