@@ -143,41 +143,7 @@ export class WsHandler {
         }
       }
 
-      // If room is full, try to kick an AI to make space
-      if (!isAlreadyInRoom && room.players.size >= room.config.maxPlayers) {
-        const aiPlayers = this.roomManager.getAIPlayers(roomRef.id, (id) => this.aiManager.isAI(id))
-        if (aiPlayers.length === 0) {
-          this.send(ws, 'error', { message: '房间已满' })
-          return
-        }
-
-        if (room.status === 'playing') {
-          // Only kick a folded/inactive AI — don't disrupt active game
-          const engine = this.roomManager.getEngine(roomRef.id)
-          const foldedAI = aiPlayers.find(ai => {
-            if (!engine) return true
-            const ps = engine.getPlayerState(ai.seatIndex)
-            return !ps || ps.status === 'folded'
-          })
-          if (!foldedAI) {
-            this.send(ws, 'error', { message: '房间已满，请等待本局结束后再加入' })
-            return
-          }
-          console.log(`[Room] Kicking folded AI ${foldedAI.nickname} to make room for ${nickname}`)
-          this.aiManager.removeAI(roomRef.id, foldedAI.id)
-          room.players.delete(foldedAI.id)
-          this.broadcastToRoom(roomRef.id, 'player-left', { seatIndex: foldedAI.seatIndex })
-        } else {
-          // Waiting state — kick last AI
-          const aiToKick = aiPlayers[aiPlayers.length - 1]
-          console.log(`[Room] Kicking AI ${aiToKick.nickname} to make room for ${nickname}`)
-          this.aiManager.removeAI(roomRef.id, aiToKick.id)
-          room.players.delete(aiToKick.id)
-          this.broadcastToRoom(roomRef.id, 'player-left', { seatIndex: aiToKick.seatIndex })
-        }
-      }
-
-      const { player, isReconnect, isSpectator } = this.roomManager.joinRoom(code, conn.playerId, nickname, avatar)
+      const { player, isReconnect } = this.roomManager.joinRoom(code, conn.playerId, nickname, avatar)
 
       // Always sync chips from DB for real users (covers both new join and host reconnect)
       if (!this.aiManager.isAI(conn.playerId)) {
@@ -213,9 +179,6 @@ export class WsHandler {
 
       if (!isReconnect) {
         this.broadcastToRoom(roomRef.id, 'player-joined', { player }, conn.playerId)
-        if (isSpectator) {
-          console.log(`[Room] ${nickname} joined as spectator in room ${code}`)
-        }
       }
     } catch (err: any) {
       this.send(ws, 'error', { message: err.message ?? 'Failed to join room' })

@@ -73,7 +73,7 @@ export class RoomManager {
     return { id: room.id, code: room.code }
   }
 
-  joinRoom(code: string, playerId: string, nickname: string, avatar: string): { player: PlayerInfo; isReconnect: boolean; isSpectator?: boolean } {
+  joinRoom(code: string, playerId: string, nickname: string, avatar: string): { player: PlayerInfo; isReconnect: boolean } {
     const upper = code.toUpperCase()
     const roomId = this.codeIndex.get(upper)
     if (!roomId) throw new Error('Room not found')
@@ -89,15 +89,13 @@ export class RoomManager {
       return { player: existing, isReconnect: true }
     }
 
-    if (room.players.size >= room.config.maxPlayers) throw new Error('房间已满')
-
+    if (room.status === 'playing') throw new Error('Game already started')
+    if (room.players.size >= room.config.maxPlayers) throw new Error('Room is full')
 
     // Find next available seat
     const usedSeats = new Set([...room.players.values()].map(p => p.seatIndex))
     let seatIndex = 0
     while (usedSeats.has(seatIndex)) seatIndex++
-
-    const isSpectator = room.status === 'playing'
 
     const player: PlayerInfo = {
       id: playerId,
@@ -105,13 +103,13 @@ export class RoomManager {
       avatar,
       seatIndex,
       chips: 0, // will be set from user balance on WS join
-      status: isSpectator ? 'sitting' : 'sitting',
+      status: 'sitting',
       isReady: false,
       isConnected: true,
     }
 
     room.players.set(playerId, player)
-    return { player, isReconnect: false, isSpectator }
+    return { player, isReconnect: false }
   }
 
   leaveRoom(roomId: string, playerId: string): void {
@@ -130,13 +128,6 @@ export class RoomManager {
       const nextPlayer = [...room.players.values()][0]
       room.hostId = nextPlayer.id
     }
-  }
-
-  /** Get all AI player IDs in a room */
-  getAIPlayers(roomId: string, isAI: (id: string) => boolean): PlayerInfo[] {
-    const room = this.rooms.get(roomId)
-    if (!room) return []
-    return [...room.players.values()].filter(p => isAI(p.id))
   }
 
   /** Check if room has any human (non-AI) players */
