@@ -302,33 +302,41 @@ export function PokerTable() {
         </svg>
       </button>
       {/* Voice chat button — top right */}
-      {voiceConnected && (
-        <button
-          onClick={toggleMute}
-          className={`fixed top-3 right-3 z-50 w-9 h-9 rounded-lg border flex items-center justify-center transition-all ${
-            isMuted
+      <button
+        onClick={voiceConnected ? toggleMute : undefined}
+        className={`fixed top-3 right-3 z-50 w-9 h-9 rounded-lg border flex items-center justify-center transition-all ${
+          !voiceConnected
+            ? 'bg-black/50 border-white/10 opacity-40 cursor-not-allowed'
+            : isMuted
               ? 'bg-black/50 border-white/10 hover:bg-white/10'
               : 'bg-[#4ade80]/20 border-[#4ade80]/50 hover:bg-[#4ade80]/30'
-          }`}
-        >
-          {isMuted ? (
-            /* Mic off icon */
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-red-400">
-              <line x1="1" y1="1" x2="23" y2="23" />
-              <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-              <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.12 1.49-.34 2.18" />
-              <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
-            </svg>
-          ) : (
-            /* Mic on icon */
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-[#4ade80]">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-              <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
-            </svg>
-          )}
-        </button>
-      )}
+        }`}
+      >
+        {!voiceConnected ? (
+          /* Disconnected icon */
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-white/30">
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.12 1.49-.34 2.18" />
+            <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        ) : isMuted ? (
+          /* Mic off icon */
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-red-400">
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.12 1.49-.34 2.18" />
+            <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        ) : (
+          /* Mic on icon */
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-[#4ade80]">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        )}
+      </button>
       {/* Sidebar overlay */}
       {menuOpen && (
         <div className="fixed inset-0 z-[100] flex">

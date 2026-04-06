@@ -18,21 +18,27 @@ export function useVoice() {
   }, [])
 
   const connect = useCallback(async () => {
-    if (!gameRoom || !playerId) return
+    if (!gameRoom || !playerId) {
+      console.log('[Voice] skip: no room or player', { roomId: gameRoom?.id, playerId })
+      return
+    }
     try {
-      const res = await fetch(
-        `/api/rooms/${gameRoom.id}/voice-token?playerId=${playerId}&nickname=${encodeURIComponent(nickname)}`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      )
-      const { token: voiceToken, wsUrl } = await res.json()
-      if (!voiceToken || !wsUrl) return // LiveKit not configured
+      const url = `/api/rooms/${gameRoom.id}/voice-token?playerId=${playerId}&nickname=${encodeURIComponent(nickname)}`
+      console.log('[Voice] fetching token:', url)
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      const data = await res.json()
+      console.log('[Voice] token response:', { hasToken: !!data.token, wsUrl: data.wsUrl })
+      if (!data.token || !data.wsUrl) return // LiveKit not configured
       const lkRoom = getRoom()
-      await lkRoom.connect(wsUrl, voiceToken)
+      await lkRoom.connect(data.wsUrl, data.token)
+      console.log('[Voice] connected to LiveKit')
       // Start muted — user can unmute via UI
       await lkRoom.localParticipant.setMicrophoneEnabled(false)
       setIsMuted(true)
       setConnected(true)
-    } catch (e) { console.warn('Voice connect failed:', e) }
+    } catch (e) { console.warn('[Voice] connect failed:', e) }
   }, [getRoom, gameRoom, playerId, nickname, token])
 
   const disconnect = useCallback(() => {
@@ -47,10 +53,23 @@ export function useVoice() {
 
   const toggleMute = useCallback(async () => {
     const lkRoom = roomRef.current
-    if (!lkRoom) return
+    if (!lkRoom) {
+      console.warn('[Voice] toggleMute: no room')
+      return
+    }
     const newMuted = !isMuted
-    await lkRoom.localParticipant.setMicrophoneEnabled(!newMuted)
-    setIsMuted(newMuted)
+    try {
+      // On first unmute, browser needs mic permission — request explicitly
+      if (!newMuted) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach(t => t.stop()) // release, LiveKit will create its own
+      }
+      await lkRoom.localParticipant.setMicrophoneEnabled(!newMuted)
+      setIsMuted(newMuted)
+      console.log('[Voice] mic:', newMuted ? 'muted' : 'unmuted')
+    } catch (e) {
+      console.warn('[Voice] toggleMute failed:', e)
+    }
   }, [isMuted])
 
   // Track active speakers
