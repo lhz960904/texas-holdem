@@ -6,14 +6,14 @@ interface ActionBarProps {
 }
 
 export function ActionBar({ mySeatIndex }: ActionBarProps) {
-  const { sendAction, currentTurn, currentBet, minRaise, room, playerId } = useGameStore()
+  const { sendAction, currentTurn, currentBet, minRaise, room, playerId, hands } = useGameStore()
   const isMyTurn = currentTurn === mySeatIndex
 
   const me = room?.players.find((p) => p.id === playerId)
   const myChips = me?.chips ?? 0
 
-  // Find my current bet from hands
-  const myHand = useGameStore.getState().hands.find((h) => h.seatIndex === mySeatIndex)
+  // Find my current bet from hands (reactive)
+  const myHand = Array.isArray(hands) ? hands.find((h) => h.seatIndex === mySeatIndex) : undefined
   const myBet = myHand?.bet ?? 0
 
   const pot = room?.game?.pot ?? 0

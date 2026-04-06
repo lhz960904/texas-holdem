@@ -119,6 +119,7 @@ export class WsHandler {
           deadline: state.game.turnDeadline,
           minRaise: engine.getMinRaise(),
           currentBet: engine.getCurrentBet(),
+          hands: engine.getPlayerHandStates(),
         })
       }
 
@@ -181,6 +182,7 @@ export class WsHandler {
           deadline: gameState.turnDeadline,
           minRaise: engine.getMinRaise(),
           currentBet: engine.getCurrentBet(),
+          hands: engine.getPlayerHandStates(),
         })
         this.startTurnTimer(conn.roomId, gameState.currentTurn, room.config.turnTime)
       }
@@ -279,6 +281,7 @@ export class WsHandler {
             deadline: gameState.turnDeadline,
             minRaise: engine.getMinRaise(),
             currentBet: engine.getCurrentBet(),
+            hands: engine.getPlayerHandStates(),
           })
           this.startTurnTimer(conn.roomId, gameState.currentTurn, room.config.turnTime)
         }
@@ -411,6 +414,7 @@ export class WsHandler {
           deadline: updatedState.turnDeadline,
           minRaise: engine.getMinRaise(),
           currentBet: engine.getCurrentBet(),
+          hands: engine.getPlayerHandStates(),
         })
         this.startTurnTimer(roomId, updatedState.currentTurn, room.config.turnTime)
       }

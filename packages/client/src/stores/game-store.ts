@@ -134,8 +134,27 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     wsClient.on('game-start', ({ dealerSeat, blinds }) => {
       set((state) => {
         if (!state.room) return {}
+        const players = state.room.players
+        const seats = players.map((p) => p.seatIndex).sort((a, b) => a - b)
+        // For 2 players: dealer=seat[0], SB=next, BB=next
+        // For 3+: dealer=dealerSeat, SB=next, BB=next
+        const dealerIdx = seats.indexOf(dealerSeat)
+        const sbIdx = (dealerIdx + 1) % seats.length
+        const bbIdx = (dealerIdx + (seats.length === 2 ? 1 : 2)) % seats.length
+        const sbSeat = seats[sbIdx]
+        const bbSeat = seats.length === 2 ? seats[dealerIdx] : seats[bbIdx]
+
+        // Initialize hands with blind bets
+        const initHands = players.map((p) => ({
+          seatIndex: p.seatIndex,
+          bet: p.seatIndex === sbSeat ? blinds.small : p.seatIndex === bbSeat ? blinds.big : 0,
+          totalBet: p.seatIndex === sbSeat ? blinds.small : p.seatIndex === bbSeat ? blinds.big : 0,
+          hasActed: false,
+        }))
+
         return {
           screen: 'game' as Screen,
+          hands: initHands,
           showdownResults: [],
           settleWinners: [],
           settleShowCards: false,
@@ -165,7 +184,10 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     wsClient.on('phase-change', ({ phase, communityCards }) => {
       set((state) => {
         if (!state.room?.game) return {}
+        // Reset all bets to 0 on phase change (collectBets was called)
+        const resetHands = state.hands.map((h) => ({ ...h, bet: 0 }))
         return {
+          hands: resetHands,
           room: {
             ...state.room,
             game: {
@@ -178,13 +200,17 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       })
     })
 
-    wsClient.on('turn', ({ seatIndex, deadline, minRaise, currentBet }) => {
+    wsClient.on('turn', ({ seatIndex, deadline, minRaise, currentBet, hands: turnHands }) => {
       set((state) => {
         const updates: any = {
           currentTurn: seatIndex,
           turnDeadline: deadline,
           minRaise,
           currentBet,
+        }
+        // Update hands if provided by server
+        if (turnHands) {
+          updates.hands = turnHands
         }
         if (state.room?.game) {
           updates.room = {
@@ -202,10 +228,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         return {
           room: {
             ...state.room,
-            game: {
-              ...state.room.game,
-              pot,
-            },
+            game: { ...state.room.game, pot },
           },
         }
       })

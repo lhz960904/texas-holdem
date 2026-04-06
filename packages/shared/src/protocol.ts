@@ -16,7 +16,7 @@ export interface ServerEvents {
   'game-start': { dealerSeat: number; blinds: { small: number; big: number } }
   'deal-cards': { cards: [Card, Card] }
   'phase-change': { phase: string; communityCards: Card[] }
-  'turn': { seatIndex: number; deadline: number; minRaise: number; currentBet: number }
+  'turn': { seatIndex: number; deadline: number; minRaise: number; currentBet: number; hands?: PlayerHandState[] }
   'player-action': { seatIndex: number; type: ActionType; amount: number; pot: number }
   'showdown': { results: ShowdownResult[] }
   'settle': { winners: SettleWinner[]; showCards: boolean }
