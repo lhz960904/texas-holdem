@@ -232,6 +232,8 @@ export function PokerTable() {
 
   const handleRaise = () => sendAction('raise', effectiveRaise)
   const handleAllIn = () => sendAction('allIn', myChips)
+  const leaveRoom = useGameStore((s) => s.leaveRoom)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // Parse my avatar
   const myAvatarParts = (me?.avatar ?? '👤:#888888').split(':')
@@ -252,6 +254,75 @@ export function PokerTable() {
 
   return (
     <div className="fixed inset-0 bg-[#131313] flex flex-col">
+      {/* Menu button — top left */}
+      <button
+        onClick={() => setMenuOpen(true)}
+        className="fixed top-3 left-3 z-50 w-9 h-9 rounded-lg bg-black/50 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-white/70">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      {/* Room code — top center */}
+      {room && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-black/40 px-3 py-1 rounded-full border border-white/10">
+          <span className="text-[10px] text-white/40 font-mono tracking-widest">{room.code}</span>
+        </div>
+      )}
+
+      {/* Sidebar overlay */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-[100] flex">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMenuOpen(false)} />
+          {/* Sidebar */}
+          <div className="relative w-64 h-full bg-[#1c1b1b] border-r border-white/10 flex flex-col shadow-2xl animate-[slideIn_0.2s_ease-out]">
+            {/* Header */}
+            <div className="px-4 py-4 border-b border-white/10 flex items-center justify-between">
+              <span className="font-headline font-bold text-[#e9c349] text-lg">Menu</span>
+              <button onClick={() => setMenuOpen(false)} className="text-white/40 hover:text-white/80 text-xl">&times;</button>
+            </div>
+
+            {/* Room info */}
+            <div className="px-4 py-3 border-b border-white/5">
+              <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Room</div>
+              <div className="font-mono text-[#e9c349] text-lg tracking-widest">{room?.code}</div>
+              <div className="text-[11px] text-white/40 mt-1">
+                {players.length} players · {room?.config.blinds.small}/{room?.config.blinds.big} blinds
+              </div>
+            </div>
+
+            {/* Player list */}
+            <div className="px-4 py-3 border-b border-white/5 flex-1 overflow-y-auto">
+              <div className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Players</div>
+              <div className="space-y-2">
+                {players.map(p => {
+                  const pa = (p.avatar || '👤:#888').split(':')
+                  return (
+                    <div key={p.id} className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-sm" style={{ backgroundColor: pa[1] || '#888' }}>{pa[0]}</div>
+                      <span className="text-xs text-white/70 flex-1 truncate">{p.nickname}</span>
+                      <span className="text-[10px] font-headline font-bold text-[#e9c349]">{p.chips.toLocaleString()}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-4 py-4">
+              <button
+                onClick={() => { setMenuOpen(false); leaveRoom() }}
+                className="w-full py-2.5 rounded-lg bg-red-600/20 border border-red-500/30 text-red-400 font-headline font-bold text-sm uppercase hover:bg-red-600/30 transition-colors"
+              >
+                Leave Room
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table area — flex-1 minus HUD height */}
       <div className="relative flex-1 min-h-0 flex items-center justify-center p-2 sm:p-4">
         {/* Table container */}

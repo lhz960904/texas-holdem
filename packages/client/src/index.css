@@ -55,6 +55,11 @@ html, body {
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
 @keyframes chipSlide {
   from { transform: translateY(20px) scale(0.5); opacity: 0; }
   to { transform: translateY(0) scale(1); opacity: 1; }
