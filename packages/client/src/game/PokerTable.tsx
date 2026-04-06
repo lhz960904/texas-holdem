@@ -71,7 +71,7 @@ function getOpponentPositions(
 }
 
 // Self position for bet chip calculation (bottom center, off-table)
-const SELF_POSITION = { top: '78%', left: '50%' }
+const SELF_POSITION = { top: '95%', left: '50%' }
 
 // Calculate bet chip position: lerp from player toward center
 function getBetPosition(playerPos: { top: string; left: string }): { top: string; left: string } {
