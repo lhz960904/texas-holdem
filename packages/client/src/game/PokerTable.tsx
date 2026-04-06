@@ -1,6 +1,4 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import Slider from 'rc-slider'
-import 'rc-slider/assets/index.css'
 import { useGameStore } from '../stores/game-store'
 import { SettleOverlay } from '../components/SettleOverlay'
 import { PlayingCard } from './PlayingCard'
@@ -291,12 +289,6 @@ export function PokerTable() {
 
   return (
     <div className="fixed inset-0 bg-[#131313] flex flex-col">
-      {/* Portrait rotation prompt */}
-      <div className="portrait-block fixed inset-0 z-[999] bg-[#0a0a0a] flex-col items-center justify-center gap-4">
-        <div className="text-5xl animate-[spin_2s_ease-in-out_infinite]">📱</div>
-        <p className="text-[#d4a843] font-bold text-lg">请旋转手机至横屏</p>
-        <p className="text-[#666] text-xs">横屏体验更佳</p>
-      </div>
       {/* Menu button — top left */}
       <button
         onClick={() => setMenuOpen(true)}
@@ -586,20 +578,13 @@ export function PokerTable() {
                   {/* Raise panel — pops up above the button */}
                   {raiseOpen && isMyTurn && (
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#1a1a1a] border border-[#333] rounded-xl p-3 shadow-2xl min-w-[220px] z-50">
-                      {/* Slider */}
-                      <div className="px-1 mb-1">
-                        <Slider
-                          min={effectiveMinRaise}
-                          max={maxRaiseBet}
-                          value={effectiveRaise}
-                          onChange={(v) => setRaiseAmount(v as number)}
-                          styles={{
-                            track: { backgroundColor: '#e9c349', height: 4 },
-                            rail: { backgroundColor: 'rgba(255,255,255,0.1)', height: 4 },
-                            handle: { backgroundColor: '#e9c349', borderColor: '#1a1a1a', width: 22, height: 22, marginTop: -9, opacity: 1 },
-                          }}
-                        />
-                      </div>
+                      {/* Slider — rotation-aware for CSS forced landscape */}
+                      <RotationAwareSlider
+                        min={effectiveMinRaise}
+                        max={maxRaiseBet}
+                        value={effectiveRaise}
+                        onChange={setRaiseAmount}
+                      />
                       {/* Amount display */}
                       <p className="text-center text-[#e9c349] font-mono font-bold text-sm mb-2">{effectiveRaise.toLocaleString()}</p>
                       {/* Preset buttons */}
@@ -629,6 +614,73 @@ export function PokerTable() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/** Detect if CSS forced rotation is active (portrait + force-landscape class) */
+function isRotated(): boolean {
+  return document.body.classList.contains('force-landscape') &&
+    window.matchMedia('(orientation: portrait)').matches &&
+    window.innerWidth <= 768
+}
+
+/** Slider that works correctly even when CSS rotate(90deg) is applied */
+function RotationAwareSlider({ min, max, value, onChange }: {
+  min: number; max: number; value: number; onChange: (v: number) => void
+}) {
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  const calcValue = useCallback((clientX: number, clientY: number) => {
+    const track = trackRef.current
+    if (!track) return
+    const rect = track.getBoundingClientRect()
+
+    let ratio: number
+    if (isRotated()) {
+      // CSS rotated 90deg CW: visual X maps to raw Y (inverted)
+      ratio = 1 - (clientY - rect.top) / rect.height
+    } else {
+      ratio = (clientX - rect.left) / rect.width
+    }
+    ratio = Math.max(0, Math.min(1, ratio))
+    onChange(Math.round(min + ratio * (max - min)))
+  }, [min, max, onChange])
+
+  const onTouch = useCallback((e: React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const t = e.touches[0]
+    calcValue(t.clientX, t.clientY)
+  }, [calcValue])
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    calcValue(e.clientX, e.clientY)
+    const onMove = (ev: MouseEvent) => calcValue(ev.clientX, ev.clientY)
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [calcValue])
+
+  const pct = max > min ? ((value - min) / (max - min)) * 100 : 0
+
+  return (
+    <div
+      ref={trackRef}
+      className="relative h-8 mb-1 flex items-center cursor-pointer"
+      onTouchStart={onTouch}
+      onTouchMove={onTouch}
+      onMouseDown={onMouseDown}
+    >
+      <div className="absolute left-0 right-0 h-1 bg-white/10 rounded-full" />
+      <div className="absolute left-0 h-1 bg-[#e9c349] rounded-full" style={{ width: `${pct}%` }} />
+      <div
+        className="absolute w-6 h-6 bg-[#e9c349] rounded-full shadow-lg border-2 border-[#1a1a1a] -translate-x-1/2"
+        style={{ left: `${pct}%` }}
+      />
     </div>
   )
 }
