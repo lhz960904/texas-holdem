@@ -64,11 +64,6 @@ export function PlayingCard({ card, small, large, className = '', animationDelay
           {suitSymbol}
         </span>
       </div>
-      <div className="self-center">
-        <span className={`${colorClass} ${centerSuitSize}`}>
-          {suitSymbol}
-        </span>
-      </div>
     </div>
   )
 }
