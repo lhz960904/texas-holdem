@@ -542,13 +542,7 @@ export class WsHandler {
       if (room) {
         const playerInfo = room.players.get(conn.playerId)
         if (playerInfo) {
-          if (room.status === 'waiting') {
-            this.leaveAndCleanupRoom(conn.roomId, conn.playerId)
-          } else {
-            playerInfo.isConnected = false
-            // Even during game, check if all humans disconnected
-            this.checkAndDestroyEmptyRoom(conn.roomId)
-          }
+          playerInfo.isConnected = false
         }
       }
     }
