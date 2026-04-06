@@ -22,3 +22,15 @@ server.on('upgrade', (req, socket, head) => {
     socket.destroy()
   }
 })
+
+// Graceful shutdown
+function shutdown() {
+  console.log('\nShutting down...')
+  wsHandler.getWss().close()
+  server.close(() => process.exit(0))
+  // Force exit after 2s if close hangs
+  setTimeout(() => process.exit(0), 2000)
+}
+
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)
