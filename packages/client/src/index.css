@@ -114,3 +114,8 @@ html, body {
 .animate-chip-collect {
   animation: chipCollect 0.6s ease-in forwards;
 }
+
+@keyframes speakPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}

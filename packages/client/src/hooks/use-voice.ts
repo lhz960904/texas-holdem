@@ -1,46 +1,68 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Room, RoomEvent, Participant } from 'livekit-client'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Room, RoomEvent, type Participant } from 'livekit-client'
 import { useGameStore } from '../stores/game-store'
 
 export function useVoice() {
-  const [room] = useState(() => new Room())
-  const [isMuted, setIsMuted] = useState(false)
+  const roomRef = useRef<Room | null>(null)
+  const [isMuted, setIsMuted] = useState(true) // start muted
   const [speakingParticipants, setSpeaking] = useState<Set<string>>(new Set())
   const [connected, setConnected] = useState(false)
   const gameRoom = useGameStore((s) => s.room)
   const playerId = useGameStore((s) => s.user?.id ?? null)
+  const nickname = useGameStore((s) => s.user?.nickname ?? 'player')
+  const token = useGameStore((s) => s.token)
+
+  const getRoom = useCallback(() => {
+    if (!roomRef.current) roomRef.current = new Room()
+    return roomRef.current
+  }, [])
 
   const connect = useCallback(async () => {
     if (!gameRoom || !playerId) return
     try {
-      const res = await fetch(`/api/rooms/${gameRoom.id}/voice-token?playerId=${playerId}&nickname=player`)
-      const { token, wsUrl } = await res.json()
-      if (!token || !wsUrl) return // LiveKit not configured, skip
-      await room.connect(wsUrl, token)
-      await room.localParticipant.setMicrophoneEnabled(true)
+      const res = await fetch(
+        `/api/rooms/${gameRoom.id}/voice-token?playerId=${playerId}&nickname=${encodeURIComponent(nickname)}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      )
+      const { token: voiceToken, wsUrl } = await res.json()
+      if (!voiceToken || !wsUrl) return // LiveKit not configured
+      const lkRoom = getRoom()
+      await lkRoom.connect(wsUrl, voiceToken)
+      // Start muted — user can unmute via UI
+      await lkRoom.localParticipant.setMicrophoneEnabled(false)
+      setIsMuted(true)
       setConnected(true)
     } catch (e) { console.warn('Voice connect failed:', e) }
-  }, [room, gameRoom, playerId])
+  }, [getRoom, gameRoom, playerId, nickname, token])
 
   const disconnect = useCallback(() => {
-    room.disconnect()
+    const lkRoom = roomRef.current
+    if (lkRoom) {
+      lkRoom.disconnect()
+      roomRef.current = null
+    }
     setConnected(false)
-  }, [room])
+    setIsMuted(true)
+  }, [])
 
   const toggleMute = useCallback(async () => {
+    const lkRoom = roomRef.current
+    if (!lkRoom) return
     const newMuted = !isMuted
-    await room.localParticipant.setMicrophoneEnabled(!newMuted)
+    await lkRoom.localParticipant.setMicrophoneEnabled(!newMuted)
     setIsMuted(newMuted)
-  }, [room, isMuted])
+  }, [isMuted])
 
-  // Track speaking
+  // Track active speakers
   useEffect(() => {
+    const lkRoom = roomRef.current
+    if (!lkRoom) return
     const handler = (speakers: Participant[]) => {
       setSpeaking(new Set(speakers.map((s) => s.identity)))
     }
-    room.on(RoomEvent.ActiveSpeakersChanged, handler)
-    return () => { room.off(RoomEvent.ActiveSpeakersChanged, handler) }
-  }, [room])
+    lkRoom.on(RoomEvent.ActiveSpeakersChanged, handler)
+    return () => { lkRoom.off(RoomEvent.ActiveSpeakersChanged, handler) }
+  }, [connected]) // re-attach when connection state changes
 
   // Auto-connect when entering game room
   useEffect(() => {

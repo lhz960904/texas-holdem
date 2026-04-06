@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useGameStore } from '../stores/game-store'
+import { useVoice } from '../hooks/use-voice'
 import { SettleOverlay } from '../components/SettleOverlay'
 import { PlayingCard } from './PlayingCard'
 import { PlayerSeat } from './PlayerSeat'
@@ -123,6 +124,8 @@ export function PokerTable() {
   const currentBet = useGameStore((s) => s.currentBet)
   const minRaise = useGameStore((s) => s.minRaise)
   const hands = useGameStore((s) => s.hands)
+
+  const { connected: voiceConnected, isMuted, toggleMute, speakingParticipants } = useVoice()
 
   const [now, setNow] = useState(Date.now())
   const [betAnimations, setBetAnimations] = useState<Map<number, boolean>>(new Map())
@@ -298,6 +301,34 @@ export function PokerTable() {
           <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
         </svg>
       </button>
+      {/* Voice chat button — top right */}
+      {voiceConnected && (
+        <button
+          onClick={toggleMute}
+          className={`fixed top-3 right-3 z-50 w-9 h-9 rounded-lg border flex items-center justify-center transition-all ${
+            isMuted
+              ? 'bg-black/50 border-white/10 hover:bg-white/10'
+              : 'bg-[#4ade80]/20 border-[#4ade80]/50 hover:bg-[#4ade80]/30'
+          }`}
+        >
+          {isMuted ? (
+            /* Mic off icon */
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-red-400">
+              <line x1="1" y1="1" x2="23" y2="23" />
+              <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+              <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.12 1.49-.34 2.18" />
+              <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+          ) : (
+            /* Mic on icon */
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-[#4ade80]">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+          )}
+        </button>
+      )}
       {/* Sidebar overlay */}
       {menuOpen && (
         <div className="fixed inset-0 z-[100] flex">
@@ -477,6 +508,7 @@ export function PokerTable() {
                 timerProgress={seatTimerProgress}
                 side={side}
                 style={{ top: position.top, left: position.left }}
+                isSpeaking={speakingParticipants.has(player.id)}
               />
             )
           })}
@@ -507,8 +539,11 @@ export function PokerTable() {
                   </svg>
                 )}
                 <div
-                  className={`absolute rounded-full ${!isMyTurn ? 'border-2 border-[#e9c349]' : 'border-2 border-transparent'} flex items-center justify-center text-base overflow-hidden`}
-                  style={{ backgroundColor: myColor, width: avatarSize, height: avatarSize, top: sw, left: sw }}
+                  className={`absolute rounded-full ${speakingParticipants.has(playerId ?? '') ? 'border-2 border-[#4ade80]' : !isMyTurn ? 'border-2 border-[#e9c349]' : 'border-2 border-transparent'} flex items-center justify-center text-base overflow-hidden`}
+                  style={{
+                    backgroundColor: myColor, width: avatarSize, height: avatarSize, top: sw, left: sw,
+                    ...(speakingParticipants.has(playerId ?? '') ? { boxShadow: '0 0 10px rgba(74,222,128,0.5)' } : {}),
+                  }}
                 >{myEmoji}</div>
               </div>
             )

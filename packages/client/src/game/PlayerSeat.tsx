@@ -10,6 +10,7 @@ interface PlayerSeatProps {
   timerProgress: number // 0-1, 1 = full time remaining
   side?: 'left' | 'right' | 'top'
   style: React.CSSProperties
+  isSpeaking?: boolean
 }
 
 function parseAvatar(avatar: string): { emoji: string; color: string } {
@@ -26,6 +27,7 @@ export function PlayerSeat({
   timerProgress,
   side = 'top',
   style,
+  isSpeaking = false,
 }: PlayerSeatProps) {
   const { emoji, color } = parseAvatar(player.avatar)
   const isFolded = player.status === 'folded'
@@ -66,9 +68,23 @@ export function PlayerSeat({
           />
         </svg>
       )}
+
+      {/* Speaking glow ring */}
+      {isSpeaking && (
+        <div
+          className="absolute rounded-full animate-[speakPulse_1s_ease-in-out_infinite]"
+          style={{
+            width: size + strokeWidth * 2 + 6,
+            height: size + strokeWidth * 2 + 6,
+            top: -3, left: -3,
+            border: '2px solid #4ade80',
+            boxShadow: '0 0 12px rgba(74,222,128,0.6), 0 0 24px rgba(74,222,128,0.3)',
+          }}
+        />
+      )}
       {/* Avatar circle */}
       <div
-        className={`absolute rounded-full border-2 ${!isCurrentTurn ? 'border-[#414940]' : 'border-transparent'} overflow-hidden flex items-center justify-center text-base`}
+        className={`absolute rounded-full border-2 ${isSpeaking ? 'border-[#4ade80]' : !isCurrentTurn ? 'border-[#414940]' : 'border-transparent'} overflow-hidden flex items-center justify-center text-base`}
         style={{
           backgroundColor: color,
           width: size, height: size,
