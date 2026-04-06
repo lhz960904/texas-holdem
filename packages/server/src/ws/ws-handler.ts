@@ -143,36 +143,34 @@ export class WsHandler {
         }
       }
 
-      // If room is full and game is playing, try to kick an AI to make space
+      // If room is full, try to kick an AI to make space
       if (!isAlreadyInRoom && room.players.size >= room.config.maxPlayers) {
+        const aiPlayers = this.roomManager.getAIPlayers(roomRef.id, (id) => this.aiManager.isAI(id))
+        if (aiPlayers.length === 0) {
+          this.send(ws, 'error', { message: '房间已满' })
+          return
+        }
+
         if (room.status === 'playing') {
-          // Find an AI that's not in the current hand (or any AI)
-          const aiPlayers = this.roomManager.getAIPlayers(roomRef.id, (id) => this.aiManager.isAI(id))
-          if (aiPlayers.length === 0) {
-            this.send(ws, 'error', { message: '房间已满，请等待游戏结束' })
-            return
-          }
-          // Mark the AI for removal after current hand ends
-          // For now, remove an AI that is not actively in the game engine
+          // Only kick a folded/inactive AI — don't disrupt active game
           const engine = this.roomManager.getEngine(roomRef.id)
-          let aiToKick = aiPlayers.find(ai => {
+          const foldedAI = aiPlayers.find(ai => {
             if (!engine) return true
             const ps = engine.getPlayerState(ai.seatIndex)
             return !ps || ps.status === 'folded'
-          }) ?? aiPlayers[aiPlayers.length - 1]
-
-          console.log(`[Room] Kicking AI ${aiToKick.nickname} to make room for ${nickname}`)
-          this.aiManager.removeAI(roomRef.id, aiToKick.id)
-          room.players.delete(aiToKick.id)
-          this.broadcastToRoom(roomRef.id, 'player-left', { seatIndex: aiToKick.seatIndex })
-        } else {
-          // Waiting state — also try to kick an AI
-          const aiPlayers = this.roomManager.getAIPlayers(roomRef.id, (id) => this.aiManager.isAI(id))
-          if (aiPlayers.length === 0) {
-            this.send(ws, 'error', { message: '房间已满' })
+          })
+          if (!foldedAI) {
+            this.send(ws, 'error', { message: '房间已满，请等待本局结束后再加入' })
             return
           }
+          console.log(`[Room] Kicking folded AI ${foldedAI.nickname} to make room for ${nickname}`)
+          this.aiManager.removeAI(roomRef.id, foldedAI.id)
+          room.players.delete(foldedAI.id)
+          this.broadcastToRoom(roomRef.id, 'player-left', { seatIndex: foldedAI.seatIndex })
+        } else {
+          // Waiting state — kick last AI
           const aiToKick = aiPlayers[aiPlayers.length - 1]
+          console.log(`[Room] Kicking AI ${aiToKick.nickname} to make room for ${nickname}`)
           this.aiManager.removeAI(roomRef.id, aiToKick.id)
           room.players.delete(aiToKick.id)
           this.broadcastToRoom(roomRef.id, 'player-left', { seatIndex: aiToKick.seatIndex })
