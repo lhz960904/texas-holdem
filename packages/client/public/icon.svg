@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
+  <rect width="512" height="512" fill="#0a0a0a"/>
   <text x="256" y="200" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="120" fill="#d4a843" letter-spacing="8">ALL</text>
   <text x="256" y="330" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="140" fill="#d4a843" letter-spacing="8">IN</text>
   <text x="256" y="420" text-anchor="middle" font-family="sans-serif" font-size="48" fill="#555">♠ ♥ ♦ ♣</text>
