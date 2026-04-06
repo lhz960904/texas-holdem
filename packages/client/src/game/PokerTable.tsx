@@ -76,15 +76,41 @@ function getOpponentPositions(
 const SELF_POSITION = { top: '110%', left: '50%' }
 
 // Calculate bet chip position: lerp from player toward center
+// Place bet chips right next to the player, offset toward table interior
+// Fixed small offset instead of lerp — avoids overlapping community cards
 function getBetPosition(playerPos: { top: string; left: string }): { top: string; left: string } {
-  const pTop = parseFloat(playerPos.top) / 100
-  const pLeft = parseFloat(playerPos.left) / 100
-  const cTop = 0.45
-  const cLeft = 0.50
-  const t = 0.2 // keep chips close to player
+  const pTop = parseFloat(playerPos.top)
+  const pLeft = parseFloat(playerPos.left)
+
+  // Determine offset direction based on which zone the player is in
+  let dTop = 0
+  let dLeft = 0
+
+  if (pTop < 30) {
+    // Top row — chips below player
+    dTop = 12
+  } else if (pTop > 60) {
+    // Bottom row — chips above player
+    dTop = -12
+  }
+
+  if (pLeft < 30) {
+    // Left side — chips to the right
+    dLeft = 14
+  } else if (pLeft > 70) {
+    // Right side — chips to the left
+    dLeft = -14
+  }
+
+  // If player is at top center, just push chips down
+  if (pLeft >= 30 && pLeft <= 70 && pTop < 30) {
+    dLeft = 0
+    dTop = 12
+  }
+
   return {
-    top: `${((pTop + (cTop - pTop) * t) * 100).toFixed(1)}%`,
-    left: `${((pLeft + (cLeft - pLeft) * t) * 100).toFixed(1)}%`,
+    top: `${pTop + dTop}%`,
+    left: `${pLeft + dLeft}%`,
   }
 }
 
