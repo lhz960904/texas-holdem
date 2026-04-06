@@ -34,7 +34,7 @@ export function ActionBar({ mySeatIndex }: ActionBarProps) {
   }
 
   const handleAllIn = () => {
-    sendAction('all-in', myChips)
+    sendAction('allIn', myChips)
   }
 
   return (
