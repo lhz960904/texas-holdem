@@ -638,8 +638,8 @@ function RotationAwareSlider({ min, max, value, onChange }: {
 
     let ratio: number
     if (isRotated()) {
-      // CSS rotated 90deg CW: visual X maps to raw Y (inverted)
-      ratio = 1 - (clientY - rect.top) / rect.height
+      // CSS rotated 90deg CW: visual X maps to raw Y
+      ratio = (clientY - rect.top) / rect.height
     } else {
       ratio = (clientX - rect.left) / rect.width
     }
