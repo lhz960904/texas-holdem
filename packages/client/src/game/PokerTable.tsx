@@ -24,34 +24,34 @@ const OPPONENT_POSITIONS: Record<number, { top: string; left: string }[]> = {
     { top: '12%', left: '80%' },        // top-right
   ],
   4: [
-    { top: '65%', left: '8%' },         // bottom-left
+    { top: '80%', left: '10%' },        // bottom-left
     { top: '10%', left: '30%' },        // top-left
     { top: '10%', left: '70%' },        // top-right
-    { top: '65%', left: '92%' },        // bottom-right
+    { top: '80%', left: '90%' },        // bottom-right
   ],
   5: [
-    { top: '70%', left: '8%' },         // bottom-left
-    { top: '15%', left: '15%' },        // top-left
+    { top: '80%', left: '10%' },        // bottom-left
+    { top: '15%', left: '10%' },        // top-left
     { top: '8%', left: '50%' },         // top center
-    { top: '15%', left: '85%' },        // top-right
-    { top: '70%', left: '92%' },        // bottom-right
+    { top: '15%', left: '90%' },        // top-right
+    { top: '80%', left: '90%' },        // bottom-right
   ],
   6: [
-    { top: '72%', left: '8%' },         // bottom-left
-    { top: '22%', left: '8%' },         // left
-    { top: '8%', left: '35%' },         // top-left
-    { top: '8%', left: '65%' },         // top-right
-    { top: '22%', left: '92%' },        // right
-    { top: '72%', left: '92%' },        // bottom-right
+    { top: '80%', left: '10%' },        // bottom-left
+    { top: '15%', left: '10%' },        // top-left
+    { top: '8%', left: '38%' },         // top-center-left
+    { top: '8%', left: '62%' },         // top-center-right
+    { top: '15%', left: '90%' },        // top-right
+    { top: '80%', left: '90%' },        // bottom-right
   ],
   7: [
-    { top: '75%', left: '8%' },         // bottom-left
+    { top: '80%', left: '10%' },        // bottom-left
     { top: '35%', left: '5%' },         // mid-left
     { top: '8%', left: '25%' },         // top-left
     { top: '8%', left: '50%' },         // top center
     { top: '8%', left: '75%' },         // top-right
     { top: '35%', left: '95%' },        // mid-right
-    { top: '75%', left: '92%' },        // bottom-right
+    { top: '80%', left: '90%' },        // bottom-right
   ],
 }
 
