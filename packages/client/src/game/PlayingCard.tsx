@@ -34,8 +34,14 @@ export function PlayingCard({ card, small, large, className = '', animationDelay
           animation: animationDelay > 0 ? `dealIn 0.35s ease-out ${animationDelay}ms both` : undefined,
         }}
       >
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_#e9c349_0%,_transparent_70%)]" />
-        <span className="text-[#e9c349]/30 text-2xl">🔒</span>
+        {/* Diamond pattern */}
+        <div className="absolute inset-[3px] rounded-[inherit] border border-[#e9c349]/15 overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.07]" style={{
+            backgroundImage: `repeating-linear-gradient(45deg, #e9c349 0px, #e9c349 1px, transparent 1px, transparent 8px),
+                              repeating-linear-gradient(-45deg, #e9c349 0px, #e9c349 1px, transparent 1px, transparent 8px)`,
+          }} />
+        </div>
+        <div className="relative text-[#e9c349]/20 text-sm font-bold">♠</div>
       </div>
     )
   }

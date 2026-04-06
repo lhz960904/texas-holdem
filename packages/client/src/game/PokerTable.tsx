@@ -231,7 +231,7 @@ export function PokerTable() {
             <div className="absolute inset-0 poker-felt">
               {/* Pot display */}
               {pot > 0 && (
-                <div className="absolute top-[28%] left-1/2 -translate-x-1/2 z-10">
+                <div className="absolute top-[36%] left-1/2 -translate-x-1/2 z-10">
                   <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-5 py-2 rounded-full border border-[#e9c349]/20">
                     <span className="font-headline font-extrabold text-2xl text-[#e9c349] tracking-tighter">
                       POT: {pot.toLocaleString()}
