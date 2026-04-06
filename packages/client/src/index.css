@@ -43,7 +43,8 @@ html, body {
 }
 
 @keyframes chipPushIn {
-  0% { transform: translate(var(--push-x, 0), var(--push-y, -30px)) scale(1.2); opacity: 0.5; }
+  0% { transform: translate(var(--push-x, 0px), var(--push-y, 0px)) scale(1.3); opacity: 0.3; }
+  60% { opacity: 1; }
   100% { transform: translate(0, 0) scale(1); opacity: 1; }
 }
 
@@ -58,7 +59,7 @@ html, body {
 }
 
 .animate-chip-push-in {
-  animation: chipPushIn 0.4s ease-out;
+  animation: chipPushIn 0.5s ease-out;
 }
 
 .animate-chip-collect {

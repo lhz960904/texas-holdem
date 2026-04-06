@@ -4,6 +4,7 @@ interface ChipPileProps {
   amount: number
   seatIndex: number // used as seed for consistent random scatter
   position: { x: string; y: string } // CSS position (percentage, used as top/left)
+  pushFrom?: { x: number; y: number } // direction chips slide FROM (px offset from player side)
   animate?: 'push-in' | 'collect' | null
   collectTarget?: { x: string; y: string }
 }
@@ -37,7 +38,7 @@ function getChipBreakdown(amount: number): { bg: string; count: number }[] {
   return chips
 }
 
-export function ChipPile({ amount, seatIndex, position, animate, collectTarget }: ChipPileProps) {
+export function ChipPile({ amount, seatIndex, position, pushFrom, animate, collectTarget }: ChipPileProps) {
   const chips = useMemo(() => getChipBreakdown(amount), [amount])
 
   // Flatten chips into individual items for rendering
@@ -87,9 +88,11 @@ export function ChipPile({ amount, seatIndex, position, animate, collectTarget }
       style={{
         top: position.y,
         left: position.x,
+        '--push-x': pushFrom ? `${pushFrom.x}px` : '0',
+        '--push-y': pushFrom ? `${pushFrom.y}px` : '0',
         ...collectStyle,
         ...(animate === 'collect' ? { animationFillMode: 'forwards' } : {}),
-      }}
+      } as React.CSSProperties}
     >
       {/* Scattered chip pile */}
       <div className="relative" style={{ width: '40px', height: '36px' }}>

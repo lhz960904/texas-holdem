@@ -276,12 +276,24 @@ export function PokerTable() {
           if (bet <= 0) return null
           const betPos = getBetPosition(position)
           const isAnimating = betAnimations.get(seatIndex) ?? false
+          // Push direction: from player position toward bet area
+          // Calculate as pixel offset (player is "behind" the bet area)
+          const pTop = parseFloat(position.top)
+          const pLeft = parseFloat(position.left)
+          const bTop = parseFloat(betPos.top)
+          const bLeft = parseFloat(betPos.left)
+          // Vector from bet area back to player (where chips come FROM)
+          const pushFrom = {
+            x: (pLeft - bLeft) * 3,  // scale up for visible movement
+            y: (pTop - bTop) * 3,
+          }
           return (
             <ChipPile
               key={`bet-${seatIndex}`}
               amount={bet}
               seatIndex={seatIndex}
               animate={isAnimating ? 'push-in' : null}
+              pushFrom={pushFrom}
               position={{ x: betPos.left, y: betPos.top }}
             />
           )
