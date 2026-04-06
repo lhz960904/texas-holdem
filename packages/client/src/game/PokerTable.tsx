@@ -653,19 +653,19 @@ function CustomSlider({ min, max, value, onChange }: { min: number; max: number;
   return (
     <div
       ref={trackRef}
-      className="relative h-8 mb-1 flex items-center cursor-pointer"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
+      className="relative h-6 mb-1 flex items-center cursor-pointer"
       onMouseDown={onMouseDown}
     >
       {/* Track background */}
-      <div className="absolute left-0 right-0 h-1.5 bg-white/10 rounded-full" />
+      <div className="absolute left-0 right-0 h-1 bg-white/10 rounded-full" />
       {/* Track fill */}
-      <div className="absolute left-0 h-1.5 bg-[#e9c349] rounded-full" style={{ width: `${pct}%` }} />
-      {/* Thumb */}
+      <div className="absolute left-0 h-1 bg-[#e9c349] rounded-full" style={{ width: `${pct}%` }} />
+      {/* Thumb — only this handles touch */}
       <div
-        className="absolute w-5 h-5 bg-[#e9c349] rounded-full shadow-lg border-2 border-[#1a1a1a] -translate-x-1/2"
+        className="absolute w-6 h-6 bg-[#e9c349] rounded-full shadow-lg border-2 border-[#1a1a1a] -translate-x-1/2"
         style={{ left: `${pct}%` }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
       />
     </div>
   )
