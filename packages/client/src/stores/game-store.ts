@@ -300,14 +300,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     if (!session) return false
     const { playerId, roomCode, nickname, avatar } = session
     get().initConnection(playerId)
-    // Wait for WS to connect, then rejoin room
-    setTimeout(() => {
-      useGameStore.getState().wsClient?.send('join-room', {
-        code: roomCode,
-        nickname,
-        avatar,
-      })
-    }, 500)
+    // Messages are queued until WS connects
+    get().wsClient?.send('join-room', { code: roomCode, nickname, avatar })
     set({ playerId })
     return true
   },

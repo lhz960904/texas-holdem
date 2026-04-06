@@ -40,9 +40,8 @@ export function Lobby() {
     })
     const data = await res.json()
     initConnection(data.playerId)
-    setTimeout(() => {
-      useGameStore.getState().joinRoom(data.code, nickname, `${emoji}:${color}`)
-    }, 500)
+    // Messages are queued until WS connects — no setTimeout needed
+    useGameStore.getState().joinRoom(data.code, nickname, `${emoji}:${color}`)
   }
 
   const handleJoin = () => {
@@ -50,9 +49,7 @@ export function Lobby() {
     const { emoji, color } = selectedAvatar
     const playerId = crypto.randomUUID()
     initConnection(playerId)
-    setTimeout(() => {
-      useGameStore.getState().joinRoom(roomCode.toUpperCase(), nickname, `${emoji}:${color}`)
-    }, 500)
+    useGameStore.getState().joinRoom(roomCode.toUpperCase(), nickname, `${emoji}:${color}`)
   }
 
   return (

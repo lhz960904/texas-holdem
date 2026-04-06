@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Table Design Options</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#050505; color:#e0e0e0; font-family: 'Inter', -apple-system, sans-serif; }
+h1 { text-align:center; padding:30px 0 10px; font-size:22px; color:#ffd700; letter-spacing:2px; }
+h2 { text-align:center; font-size:13px; color:#888; margin-bottom:20px; }
+.option-label { text-align:center; font-size:16px; color:#ffd700; margin:30px 0 8px; font-weight:700; letter-spacing:1px; }
+.option-desc { text-align:center; font-size:12px; color:#777; margin-bottom:12px; max-width:600px; margin-left:auto; margin-right:auto; }
+
+/* ====== COMMON ====== */
+.table-wrap {
+  width: 90%; max-width: 900px; margin: 0 auto 40px;
+  aspect-ratio: 16/9; position: relative; border-radius: 16px; overflow: hidden;
+}
+
+/* Cards */
+.card {
+  width: 44px; height: 64px; border-radius: 6px; display: inline-flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  font-weight: 700; position: relative; box-shadow: 2px 3px 10px rgba(0,0,0,0.5);
+}
+.card.face-up { background: linear-gradient(145deg, #fff 0%, #f4f4f4 100%); }
+.card.face-up.red { color: #d32f2f; }
+.card.face-up.black { color: #1a1a2e; }
+.card.face-down {
+  background: linear-gradient(145deg, #1a2d5a, #0d1a3a);
+  border: 1px solid #2a4080;
+}
+.card .rank { font-size: 15px; line-height: 1; }
+.card .suit { font-size: 13px; line-height: 1; margin-top: -1px; }
+.card.face-down::after {
+  content: ''; position: absolute; inset: 4px; border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: repeating-conic-gradient(#1a2d5a 0% 25%, #15254a 25% 50%) 50% / 8px 8px;
+}
+.card.small { width: 32px; height: 46px; border-radius: 4px; }
+.card.small .rank { font-size: 11px; }
+.card.small .suit { font-size: 10px; }
+
+/* Player node */
+.player-node { position: absolute; text-align: center; transform: translate(-50%, -50%); z-index: 2; }
+.avatar {
+  width: 52px; height: 52px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: 24px;
+  margin: 0 auto; position: relative;
+}
+.player-name { font-size: 11px; color: #ddd; margin-top: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+.player-chips { font-size: 10px; color: #ffd700; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+.player-cards { display: flex; gap: 3px; justify-content: center; margin-bottom: 4px; }
+
+/* Active glow */
+.player-node.active .avatar {
+  box-shadow: 0 0 0 3px #ffd700, 0 0 20px rgba(255,215,0,0.4);
+}
+/* Timer bar */
+.timer-bar { width: 52px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 2px; margin: 3px auto 0; overflow: hidden; }
+.timer-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #22c55e, #eab308); width: 65%; transition: width 1s linear; }
+
+/* Pot */
+.pot-display {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.6); border: 1px solid rgba(255,215,0,0.3);
+  padding: 4px 16px; border-radius: 20px; white-space: nowrap;
+  font-size: 13px; color: #ffd700; font-weight: 700; z-index: 5;
+  text-shadow: 0 0 8px rgba(255,215,0,0.3);
+}
+
+/* Community cards */
+.community { position: absolute; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
+.community .card { animation: dealIn 0.4s ease-out both; }
+.community .card:nth-child(2) { animation-delay: 0.08s; }
+.community .card:nth-child(3) { animation-delay: 0.16s; }
+.community .card:nth-child(4) { animation-delay: 0.24s; }
+.community .card:nth-child(5) { animation-delay: 0.32s; }
+
+@keyframes dealIn {
+  from { transform: translateY(-40px) scale(0.7) rotateY(180deg); opacity: 0; }
+  to { transform: translateY(0) scale(1) rotateY(0deg); opacity: 1; }
+}
+
+/* Card flip */
+.flip-container { perspective: 800px; display: inline-block; }
+.flip-card {
+  width: 44px; height: 64px; position: relative;
+  transform-style: preserve-3d; transition: transform 0.6s ease;
+}
+.flip-card.flipped { transform: rotateY(180deg); }
+.flip-front, .flip-back {
+  position: absolute; inset: 0; backface-visibility: hidden; border-radius: 6px;
+}
+.flip-front { background: linear-gradient(145deg, #fff, #f4f4f4); transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.flip-back { background: linear-gradient(145deg, #1a2d5a, #0d1a3a); border: 1px solid #2a4080; }
+
+/* Phase label */
+.phase-label {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: rgba(255,255,255,0.25); text-transform: uppercase;
+  letter-spacing: 3px; z-index: 5;
+}
+
+/* ====== OPTION A: Classic Emerald ====== */
+.opt-a {
+  background: radial-gradient(ellipse at center, #0a1a10 0%, #050d08 100%);
+}
+.opt-a .felt {
+  position: absolute; top: 6%; left: 6%; right: 6%; bottom: 6%;
+  background:
+    radial-gradient(ellipse at center, rgba(255,255,255,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at center, #1e6b3a 0%, #145228 50%, #0d3a1c 100%);
+  border-radius: 50%;
+  border: 10px solid #3a2510;
+  box-shadow:
+    inset 0 0 80px rgba(0,0,0,0.4),
+    0 0 0 4px #2a1a08,
+    0 0 60px rgba(0,0,0,0.6);
+}
+.opt-a .felt::before {
+  content: ''; position: absolute; inset: 12px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.06);
+}
+/* Subtle felt texture overlay */
+.opt-a .felt::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; opacity: 0.03;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='1' height='1' fill='%23fff'/%3E%3C/svg%3E") repeat;
+  background-size: 2px 2px;
+}
+
+/* ====== OPTION B: Midnight Blue ====== */
+.opt-b {
+  background: radial-gradient(ellipse at center, #0a0e1a 0%, #050810 100%);
+}
+.opt-b .felt {
+  position: absolute; top: 6%; left: 6%; right: 6%; bottom: 6%;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(100,160,255,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at center, #1a3050 0%, #122240 50%, #0a1428 100%);
+  border-radius: 50%;
+  border: 10px solid #1a1a2e;
+  box-shadow:
+    inset 0 0 80px rgba(0,0,0,0.5),
+    0 0 0 4px #0d0d1a,
+    0 0 0 6px rgba(100,150,255,0.1),
+    0 0 60px rgba(0,0,0,0.6);
+}
+.opt-b .felt::before {
+  content: ''; position: absolute; inset: 12px; border-radius: 50%;
+  border: 1.5px solid rgba(100,160,255,0.08);
+}
+.opt-b .pot-display {
+  background: rgba(10,20,40,0.8); border-color: rgba(100,160,255,0.3);
+  color: #7cb3ff;
+}
+
+/* ====== OPTION C: Royal Crimson ====== */
+.opt-c {
+  background: radial-gradient(ellipse at center, #1a0a0a 0%, #0a0505 100%);
+}
+.opt-c .felt {
+  position: absolute; top: 6%; left: 6%; right: 6%; bottom: 6%;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(255,100,100,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at center, #4a1528 0%, #381020 50%, #250a15 100%);
+  border-radius: 50%;
+  border: 10px solid #2a1015;
+  box-shadow:
+    inset 0 0 80px rgba(0,0,0,0.5),
+    0 0 0 4px #1a0a0e,
+    0 0 0 6px rgba(200,50,80,0.1),
+    0 0 60px rgba(0,0,0,0.6);
+}
+.opt-c .felt::before {
+  content: ''; position: absolute; inset: 12px; border-radius: 50%;
+  border: 1.5px solid rgba(255,100,100,0.06);
+}
+.opt-c .pot-display {
+  background: rgba(40,10,20,0.8); border-color: rgba(255,180,100,0.3);
+  color: #ffb060;
+}
+
+/* ====== ANIMATION DEMO ====== */
+.anim-section { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+.anim-row { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+.anim-demo {
+  background: #111; border-radius: 12px; padding: 20px; min-width: 200px;
+  text-align: center; border: 1px solid #222;
+}
+.anim-demo h4 { color: #ffd700; font-size: 12px; margin-bottom: 12px; letter-spacing: 1px; }
+
+/* Deal animation demo */
+@keyframes dealFromDeck {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 1; }
+}
+.deal-demo .card { animation: dealFromDeck 0.5s ease-out both; }
+.deal-demo .card:nth-child(1) { --dx: -30px; --dy: 20px; animation-delay: 0.1s; }
+.deal-demo .card:nth-child(2) { --dx: 30px; --dy: 20px; animation-delay: 0.2s; }
+
+/* Chip animation */
+@keyframes chipSlide {
+  from { transform: translateY(30px) scale(0.5); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+.chip {
+  width: 36px; height: 36px; border-radius: 50%; display: inline-flex;
+  align-items: center; justify-content: center; font-size: 10px; font-weight: 700;
+  color: #fff; border: 3px dashed rgba(255,255,255,0.5);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.3), 0 4px 0 rgba(0,0,0,0.2), 0 6px 0 rgba(0,0,0,0.1);
+  animation: chipSlide 0.3s ease-out both;
+}
+.chip.red { background: #c0392b; }
+.chip.green { background: #27ae60; }
+.chip.black { background: #2c3e50; }
+.chip.gold { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; }
+
+/* Win celebration */
+@keyframes winGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+  50% { box-shadow: 0 0 40px rgba(255,215,0,0.6), 0 0 80px rgba(255,215,0,0.2); }
+}
+.win-avatar { animation: winGlow 1.5s ease-in-out infinite; }
+
+/* Sound section */
+.sound-section { max-width: 700px; margin: 40px auto; padding: 0 20px; }
+.sound-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+.sound-item {
+  background: #111; border: 1px solid #222; border-radius: 8px; padding: 12px;
+  text-align: center; font-size: 11px;
+}
+.sound-item .icon { font-size: 24px; margin-bottom: 6px; }
+.sound-item .label { color: #aaa; }
+.sound-item .desc { color: #666; font-size: 10px; margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<h1>ALL IN — 牌桌视觉方案</h1>
+<h2>3 套风格 + 动画 + 音效设计</h2>
+
+<!-- ====== OPTION A ====== -->
+<div class="option-label">方案 A — 经典翡翠 (Classic Emerald)</div>
+<div class="option-desc">传统赌场深绿毡面，实木桌缘，聚光灯中心照明。经典而沉稳。</div>
+<div class="table-wrap opt-a">
+  <div class="felt"></div>
+  <div class="pot-display" style="top:28%">底池 2,400</div>
+  <div class="community" style="top:38%">
+    <div class="card face-up red"><span class="rank">A</span><span class="suit">♥</span></div>
+    <div class="card face-up black"><span class="rank">K</span><span class="suit">♠</span></div>
+    <div class="card face-up red"><span class="rank">7</span><span class="suit">♦</span></div>
+    <div class="card face-up black"><span class="rank">10</span><span class="suit">♣</span></div>
+    <div class="card face-down"></div>
+  </div>
+  <div class="phase-label" style="top:52%">TURN</div>
+
+  <!-- Players -->
+  <div class="player-node active" style="top:80%; left:50%">
+    <div class="player-cards">
+      <div class="card small face-up red"><span class="rank">A</span><span class="suit">♥</span></div>
+      <div class="card small face-up black"><span class="rank">K</span><span class="suit">♣</span></div>
+    </div>
+    <div class="avatar" style="background:#e67e22; border:2px solid rgba(255,255,255,0.3);">🐺</div>
+    <div class="timer-bar"><div class="timer-fill"></div></div>
+    <div class="player-name">Haoze</div>
+    <div class="player-chips">$12,800</div>
+  </div>
+
+  <div class="player-node" style="top:8%; left:50%">
+    <div class="player-cards">
+      <div class="card small face-down"></div>
+      <div class="card small face-down"></div>
+    </div>
+    <div class="avatar" style="background:#3498db; border:2px solid rgba(255,255,255,0.2);">🦊</div>
+    <div class="player-name">Alex</div>
+    <div class="player-chips">$9,200</div>
+  </div>
+
+  <div class="player-node" style="top:40%; left:5%">
+    <div class="player-cards">
+      <div class="card small face-down"></div>
+      <div class="card small face-down"></div>
+    </div>
+    <div class="avatar" style="background:#9b59b6; border:2px solid rgba(255,255,255,0.2);">🐱</div>
+    <div class="player-name">Jenny</div>
+    <div class="player-chips">$7,500</div>
+  </div>
+
+  <div class="player-node" style="top:40%; right:5%; left:auto; transform:translate(50%,-50%);">
+    <div class="avatar" style="background:#555; border:2px solid rgba(255,255,255,0.1); opacity:0.4;">🦁</div>
+    <div class="player-name" style="opacity:0.4;">Mike (折叠)</div>
+    <div class="player-chips" style="opacity:0.4;">$3,100</div>
+  </div>
+</div>
+
+<!-- ====== OPTION B ====== -->
+<div class="option-label">方案 B — 午夜蓝 (Midnight Blue)</div>
+<div class="option-desc">深蓝冷色调，科技感蓝光边缘，现代简约。适合线上竞技氛围。</div>
+<div class="table-wrap opt-b">
+  <div class="felt"></div>
+  <div class="pot-display" style="top:28%">底池 2,400</div>
+  <div class="community" style="top:38%">
+    <div class="card face-up red"><span class="rank">Q</span><span class="suit">♥</span></div>
+    <div class="card face-up black"><span class="rank">J</span><span class="suit">♠</span></div>
+    <div class="card face-up red"><span class="rank">10</span><span class="suit">♦</span></div>
+    <div class="card face-down"></div>
+    <div class="card face-down"></div>
+  </div>
+  <div class="phase-label" style="top:52%">FLOP</div>
+
+  <div class="player-node active" style="top:80%; left:50%">
+    <div class="player-cards">
+      <div class="card small face-up red"><span class="rank">9</span><span class="suit">♥</span></div>
+      <div class="card small face-up black"><span class="rank">8</span><span class="suit">♠</span></div>
+    </div>
+    <div class="avatar" style="background:#2980b9; border:2px solid rgba(100,160,255,0.4);">🐺</div>
+    <div class="timer-bar"><div class="timer-fill" style="background:linear-gradient(90deg,#3b82f6,#60a5fa);"></div></div>
+    <div class="player-name">Haoze</div>
+    <div class="player-chips">$12,800</div>
+  </div>
+
+  <div class="player-node" style="top:8%; left:50%">
+    <div class="player-cards">
+      <div class="card small face-down"></div>
+      <div class="card small face-down"></div>
+    </div>
+    <div class="avatar" style="background:#8e44ad; border:2px solid rgba(100,160,255,0.2);">🦈</div>
+    <div class="player-name">Sarah</div>
+    <div class="player-chips">$8,900</div>
+  </div>
+
+  <div class="player-node" style="top:45%; left:5%">
+    <div class="player-cards">
+      <div class="card small face-down"></div>
+      <div class="card small face-down"></div>
+    </div>
+    <div class="avatar" style="background:#16a085; border:2px solid rgba(100,160,255,0.2);">🐼</div>
+    <div class="player-name">Bob</div>
+    <div class="player-chips">$6,300</div>
+  </div>
+</div>
+
+<!-- ====== OPTION C ====== -->
+<div class="option-label">方案 C — 皇家酒红 (Royal Crimson)</div>
+<div class="option-desc">深酒红毡面，奢华金色点缀，VIP 包房既视感。最具赌场沉浸感。</div>
+<div class="table-wrap opt-c">
+  <div class="felt"></div>
+  <div class="pot-display" style="top:28%">底池 2,400</div>
+  <div class="community" style="top:38%">
+    <div class="card face-up black"><span class="rank">A</span><span class="suit">♠</span></div>
+    <div class="card face-up black"><span class="rank">A</span><span class="suit">♣</span></div>
+    <div class="card face-up red"><span class="rank">K</span><span class="suit">♥</span></div>
+    <div class="card face-up red"><span class="rank">K</span><span class="suit">♦</span></div>
+    <div class="card face-up black"><span class="rank">Q</span><span class="suit">♠</span></div>
+  </div>
+  <div class="phase-label" style="top:52%">RIVER</div>
+
+  <div class="player-node" style="top:80%; left:50%">
+    <div class="player-cards">
+      <div class="card small face-up red"><span class="rank">A</span><span class="suit">♥</span></div>
+      <div class="card small face-up red"><span class="rank">A</span><span class="suit">♦</span></div>
+    </div>
+    <div class="avatar win-avatar" style="background:#c0392b; border:3px solid #ffd700;">🐺</div>
+    <div class="player-name" style="color:#ffd700;">Haoze 🏆</div>
+    <div class="player-chips">$24,600</div>
+  </div>
+
+  <div class="player-node" style="top:8%; left:50%">
+    <div class="player-cards">
+      <div class="card small face-up black"><span class="rank">K</span><span class="suit">♣</span></div>
+      <div class="card small face-up black"><span class="rank">Q</span><span class="suit">♣</span></div>
+    </div>
+    <div class="avatar" style="background:#2c3e50; border:2px solid rgba(255,100,100,0.2);">🦊</div>
+    <div class="player-name">Rival</div>
+    <div class="player-chips">$5,400</div>
+  </div>
+
+  <div class="player-node" style="top:50%; left:5%">
+    <div class="avatar" style="background:#444; opacity:0.35; border:2px solid rgba(255,255,255,0.1);">🐱</div>
+    <div class="player-name" style="opacity:0.35;">已弃牌</div>
+  </div>
+
+  <div class="player-node" style="top:50%; right:5%; left:auto; transform:translate(50%,-50%);">
+    <div class="avatar" style="background:#444; opacity:0.35; border:2px solid rgba(255,255,255,0.1);">🐼</div>
+    <div class="player-name" style="opacity:0.35;">已弃牌</div>
+  </div>
+</div>
+
+<!-- ====== ANIMATION DEMOS ====== -->
+<div class="anim-section">
+  <div class="option-label">动画效果预览</div>
+  <div class="option-desc">发牌滑动、3D 翻牌、筹码堆叠、赢家庆祝</div>
+  <div class="anim-row">
+    <div class="anim-demo">
+      <h4>发牌动画</h4>
+      <div class="deal-demo" style="position:relative; height:80px; display:flex; align-items:center; justify-content:center; gap:8px;">
+        <div class="card small face-down" style="animation: dealFromDeck 0.5s ease-out both; --dx:-20px; --dy:0;"></div>
+        <div class="card small face-down" style="animation: dealFromDeck 0.5s ease-out 0.15s both; --dx:20px; --dy:0;"></div>
+      </div>
+      <p style="font-size:10px;color:#666;margin-top:8px;">从牌堆滑出 + 缩放渐入</p>
+    </div>
+
+    <div class="anim-demo">
+      <h4>3D 翻牌</h4>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <div class="flip-container" onclick="this.querySelector('.flip-card').classList.toggle('flipped')">
+          <div class="flip-card flipped" style="cursor:pointer;">
+            <div class="flip-front face-up red" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <span class="rank">A</span><span class="suit">♥</span>
+            </div>
+            <div class="flip-back face-down"></div>
+          </div>
+        </div>
+        <div class="flip-container" onclick="this.querySelector('.flip-card').classList.toggle('flipped')">
+          <div class="flip-card" style="cursor:pointer;">
+            <div class="flip-front face-up black" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <span class="rank">K</span><span class="suit">♠</span>
+            </div>
+            <div class="flip-back face-down"></div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:10px;color:#666;margin-top:8px;">点击翻转 · perspective 3D</p>
+    </div>
+
+    <div class="anim-demo">
+      <h4>筹码堆叠</h4>
+      <div style="display:flex;gap:6px;justify-content:center;align-items:flex-end;">
+        <div class="chip red" style="animation-delay:0s;">5</div>
+        <div class="chip green" style="animation-delay:0.1s;">25</div>
+        <div class="chip black" style="animation-delay:0.2s;">100</div>
+        <div class="chip gold" style="animation-delay:0.3s;">500</div>
+      </div>
+      <p style="font-size:10px;color:#666;margin-top:8px;">滑入 + 多层阴影模拟厚度</p>
+    </div>
+
+    <div class="anim-demo">
+      <h4>赢家庆祝</h4>
+      <div style="display:flex;justify-content:center;">
+        <div class="avatar win-avatar" style="background:#c0392b;border:3px solid #ffd700;width:48px;height:48px;">🏆</div>
+      </div>
+      <p style="font-size:10px;color:#666;margin-top:8px;">金色脉冲光环 + 图标动画</p>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SOUND DESIGN ====== -->
+<div class="sound-section">
+  <div class="option-label">音效设计</div>
+  <div class="option-desc">每个操作配一个短促音效，营造真实赌场氛围</div>
+  <div class="sound-grid">
+    <div class="sound-item">
+      <div class="icon">🃏</div>
+      <div class="label">发牌</div>
+      <div class="desc">纸牌滑动声 ~0.3s</div>
+    </div>
+    <div class="sound-item">
+      <div class="icon">🔄</div>
+      <div class="label">翻牌</div>
+      <div class="desc">清脆翻转 ~0.2s</div>
+    </div>
+    <div class="sound-item">
+      <div class="icon">🪙</div>
+      <div class="label">下注/跟注</div>
+      <div class="desc">筹码碰撞声 ~0.4s</div>
+    </div>
+    <div class="sound-item">
+      <div class="icon">✅</div>
+      <div class="label">过牌</div>
+      <div class="desc">轻叩桌面 ~0.15s</div>
+    </div>
+    <div class="sound-item">
+      <div class="icon">❌</div>
+      <div class="label">弃牌</div>
+      <div class="desc">牌滑入弃牌堆 ~0.3s</div>
+    </div>
+    <div class="sound-item">
+      <div class="icon">🏆</div>
+      <div class="label">赢牌</div>
+      <div class="desc">筹码雨 + 短旋律 ~1.5s</div>
+    </div>
+    <div class="sound-item">
+      <div class="icon">⏰</div>
+      <div class="label">倒计时</div>
+      <div class="desc">最后5秒滴答声</div>
+    </div>
+    <div class="sound-item">
+      <div class="icon">🔔</div>
+      <div class="label">轮到你</div>
+      <div class="desc">柔和提示音 ~0.3s</div>
+    </div>
+  </div>
+</div>
+
+<div style="height:60px;"></div>
+</body>
+</html>

@@ -7,6 +7,7 @@ export class WsClient {
   private handlers = new Map<string, Set<Function>>()
   private playerId: string
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private pendingMessages: string[] = []
 
   constructor(playerId: string) {
     this.playerId = playerId
@@ -16,6 +17,13 @@ export class WsClient {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
     const url = `${protocol}//${location.host}/ws?playerId=${this.playerId}`
     this.ws = new WebSocket(url)
+    this.ws.onopen = () => {
+      // Flush pending messages
+      for (const msg of this.pendingMessages) {
+        this.ws?.send(msg)
+      }
+      this.pendingMessages = []
+    }
     this.ws.onmessage = (event) => {
       const msg: WSMessage = JSON.parse(event.data)
       this.handlers.get(msg.event)?.forEach((h) => h(msg.data))
@@ -35,8 +43,12 @@ export class WsClient {
   }
 
   send<E extends ClientEventName>(event: E, data: ClientEvents[E]) {
+    const msg = JSON.stringify({ event, data })
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ event, data }))
+      this.ws.send(msg)
+    } else {
+      // Queue message to send when connected
+      this.pendingMessages.push(msg)
     }
   }
 
