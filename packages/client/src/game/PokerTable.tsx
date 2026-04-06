@@ -338,6 +338,10 @@ export function PokerTable() {
             const hand = handsMap.get(seatIndex)
             const cards: [Card, Card] | null = (hand?.cards as [Card, Card]) ?? null
 
+            // Determine side based on left position
+            const leftPct = parseFloat(position.left)
+            const side = leftPct > 60 ? 'right' : leftPct < 40 ? 'left' : 'top'
+
             return (
               <PlayerSeat
                 key={seatIndex}
@@ -346,6 +350,7 @@ export function PokerTable() {
                 cards={cards}
                 bet={hand?.bet ?? 0}
                 isDealer={dealerSeat === seatIndex}
+                side={side}
                 style={{ top: position.top, left: position.left }}
               />
             )
