@@ -211,6 +211,7 @@ export class WsHandler {
 
       this.clearTurnTimer(conn.roomId)
 
+      const prevPhase = engine.getPhase()
       const success = engine.handleAction(playerInfo.seatIndex, data.type, data.amount)
       if (!success) {
         this.send(ws, 'error', { message: 'Invalid action' })
@@ -265,24 +266,21 @@ export class WsHandler {
         })
       } else {
         // Normal phase change or same phase, broadcast updated turn
-        const updatedState = engine.getState()
-        const prevGameState = gameState
-
-        if (updatedState.phase !== prevGameState.phase) {
+        if (phase !== prevPhase) {
           this.broadcastToRoom(conn.roomId, 'phase-change', {
-            phase: updatedState.phase,
-            communityCards: updatedState.communityCards,
+            phase: gameState.phase,
+            communityCards: gameState.communityCards,
           })
         }
 
-        if (updatedState.currentTurn >= 0) {
+        if (gameState.currentTurn >= 0) {
           this.broadcastToRoom(conn.roomId, 'turn', {
-            seatIndex: updatedState.currentTurn,
-            deadline: updatedState.turnDeadline,
+            seatIndex: gameState.currentTurn,
+            deadline: gameState.turnDeadline,
             minRaise: engine.getMinRaise(),
             currentBet: engine.getCurrentBet(),
           })
-          this.startTurnTimer(conn.roomId, updatedState.currentTurn, room.config.turnTime)
+          this.startTurnTimer(conn.roomId, gameState.currentTurn, room.config.turnTime)
         }
       }
     } catch (err: any) {
