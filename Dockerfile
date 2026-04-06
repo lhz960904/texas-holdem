@@ -23,9 +23,6 @@ RUN pnpm build
 # Expose port
 EXPOSE 3001
 
-# Data volume for SQLite persistence
-VOLUME /app/packages/server/data
-
 ENV NODE_ENV=production
 ENV PORT=3001
 
