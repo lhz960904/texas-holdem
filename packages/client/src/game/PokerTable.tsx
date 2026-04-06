@@ -234,11 +234,9 @@ export function PokerTable() {
   const handleAllIn = () => sendAction('allIn', myChips)
   const leaveRoom = useGameStore((s) => s.leaveRoom)
   const toggleReady = useGameStore((s) => s.toggleReady)
-  const startGame = useGameStore((s) => s.startGame)
   const [menuOpen, setMenuOpen] = useState(false)
 
   const isWaiting = room?.status === 'waiting'
-  const isHost = room?.hostId === playerId
   const amIReady = me?.isReady ?? false
 
   // Parse my avatar
@@ -510,12 +508,6 @@ export function PokerTable() {
                     : 'border border-[#96d59b] text-[#96d59b] hover:bg-[#96d59b]/10'
                 }`}
               >{amIReady ? '✓ Ready' : 'Ready'}</button>
-              {isHost && (
-                <button
-                  onClick={startGame}
-                  className="h-8 px-5 rounded-lg bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-xs uppercase"
-                >Start Game</button>
-              )}
               <span className="text-[10px] text-white/30">
                 {players.filter(p => p.isReady).length}/{players.length} ready
               </span>

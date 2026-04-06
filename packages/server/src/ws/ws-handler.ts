@@ -234,11 +234,13 @@ export class WsHandler {
 
       const gameState = engine.getState()
 
+      const playerState = engine.getPlayerState(playerInfo.seatIndex)
       this.broadcastToRoom(conn.roomId, 'player-action', {
         seatIndex: playerInfo.seatIndex,
         type: data.type,
         amount: data.amount ?? 0,
         pot: gameState.pot,
+        chips: playerState?.chips ?? 0,
       })
 
       const phase = engine.getPhase()
@@ -378,11 +380,13 @@ export class WsHandler {
 
     const gameState = engine.getState()
 
+    const foldedPlayerState = engine.getPlayerState(seatIndex)
     this.broadcastToRoom(roomId, 'player-action', {
       seatIndex,
       type: 'fold',
       amount: 0,
       pot: gameState.pot,
+      chips: foldedPlayerState?.chips ?? 0,
     })
 
     const phase = engine.getPhase()

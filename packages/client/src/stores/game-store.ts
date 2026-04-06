@@ -256,21 +256,25 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       })
     })
 
-    wsClient.on('player-action', ({ seatIndex, type, pot }) => {
+    wsClient.on('player-action', ({ seatIndex, type, pot, chips }) => {
       if (type === 'fold') {
         sounds.play('fold')
       } else if (type === 'check') {
         sounds.play('check')
       } else {
-        // call, raise, allIn
         sounds.play('chips')
       }
       set((state) => {
         if (!state.room?.game) return {}
+        // Update the acting player's chips
+        const updatedPlayers = state.room.players.map((p) =>
+          p.seatIndex === seatIndex ? { ...p, chips } : p
+        )
         return {
           lastAction: { seatIndex, type },
           room: {
             ...state.room,
+            players: updatedPlayers,
             game: { ...state.room.game, pot },
           },
         }
