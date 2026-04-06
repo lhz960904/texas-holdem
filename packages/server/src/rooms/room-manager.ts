@@ -73,7 +73,7 @@ export class RoomManager {
     return { id: room.id, code: room.code }
   }
 
-  joinRoom(code: string, playerId: string, nickname: string, avatar: string): PlayerInfo {
+  joinRoom(code: string, playerId: string, nickname: string, avatar: string): { player: PlayerInfo; isReconnect: boolean } {
     const upper = code.toUpperCase()
     const roomId = this.codeIndex.get(upper)
     if (!roomId) throw new Error('Room not found')
@@ -81,12 +81,12 @@ export class RoomManager {
     const room = this.rooms.get(roomId)
     if (!room) throw new Error('Room not found')
 
-    // If player is already in the room (e.g. host), just update info
+    // If player is already in the room (e.g. host or reconnect), just update info
     if (room.players.has(playerId)) {
       const existing = room.players.get(playerId)!
       existing.nickname = nickname
       existing.avatar = avatar
-      return existing
+      return { player: existing, isReconnect: true }
     }
 
     if (room.status === 'playing') throw new Error('Game already started')
@@ -109,7 +109,7 @@ export class RoomManager {
     }
 
     room.players.set(playerId, player)
-    return player
+    return { player, isReconnect: false }
   }
 
   leaveRoom(roomId: string, playerId: string): void {

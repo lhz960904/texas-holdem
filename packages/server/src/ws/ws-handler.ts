@@ -89,7 +89,7 @@ export class WsHandler {
   private onJoinRoom(ws: WebSocket, conn: PlayerConnection, data: ClientEvents['join-room']): void {
     try {
       const { code, nickname, avatar } = data
-      const player = this.roomManager.joinRoom(code, conn.playerId, nickname, avatar)
+      const { player, isReconnect } = this.roomManager.joinRoom(code, conn.playerId, nickname, avatar)
       const roomRef = this.roomManager.getRoomByCode(code)
       if (!roomRef) {
         this.send(ws, 'error', { message: 'Room not found after join' })
@@ -124,7 +124,10 @@ export class WsHandler {
         })
       }
 
-      this.broadcastToRoom(roomRef.id, 'player-joined', { player }, conn.playerId)
+      // Only broadcast player-joined for NEW players, not reconnects
+      if (!isReconnect) {
+        this.broadcastToRoom(roomRef.id, 'player-joined', { player }, conn.playerId)
+      }
     } catch (err: any) {
       this.send(ws, 'error', { message: err.message ?? 'Failed to join room' })
     }

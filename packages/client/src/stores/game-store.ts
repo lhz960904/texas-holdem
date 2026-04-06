@@ -118,10 +118,14 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     wsClient.on('player-joined', ({ player }) => {
       set((state) => {
         if (!state.room) return {}
+        // Prevent duplicates — filter out any existing player with same seatIndex or id
+        const filtered = state.room.players.filter(
+          (p) => p.seatIndex !== player.seatIndex && p.id !== player.id
+        )
         return {
           room: {
             ...state.room,
-            players: [...state.room.players, player],
+            players: [...filtered, player],
           },
         }
       })

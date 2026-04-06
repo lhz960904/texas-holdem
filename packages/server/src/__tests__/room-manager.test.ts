@@ -45,7 +45,7 @@ describe('RoomManager', () => {
 
   it('adds player to room', () => {
     const room = manager.createRoom('host-1', defaultConfig)
-    const player = manager.joinRoom(room.code, 'player-2', 'Alice', 'avatar.png')
+    const { player } = manager.joinRoom(room.code, 'player-2', 'Alice', 'avatar.png')
     expect(player.id).toBe('player-2')
     expect(player.nickname).toBe('Alice')
     expect(player.avatar).toBe('avatar.png')
