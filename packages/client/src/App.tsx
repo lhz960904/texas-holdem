@@ -47,7 +47,7 @@ export function App() {
     case 'waiting':
       return <Suspense fallback={<LoadingScreen />}><WaitingRoom /></Suspense>
     case 'game':
-      return <Suspense fallback={<LoadingScreen />}><PokerTable /></Suspense>
+      return <Suspense fallback={<div />}><PokerTable /></Suspense>
     default:
       return <Login />
   }
