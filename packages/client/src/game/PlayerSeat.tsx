@@ -7,7 +7,8 @@ interface PlayerSeatProps {
   cards: [Card, Card] | null
   bet: number
   isDealer: boolean
-  side?: 'left' | 'right' | 'top' // right side = reverse order (cards first, avatar after)
+  timerProgress: number // 0-1, 1 = full time remaining
+  side?: 'left' | 'right' | 'top'
   style: React.CSSProperties
 }
 
@@ -22,6 +23,7 @@ export function PlayerSeat({
   cards,
   bet,
   isDealer,
+  timerProgress,
   side = 'top',
   style,
 }: PlayerSeatProps) {
@@ -29,16 +31,54 @@ export function PlayerSeat({
   const isFolded = player.status === 'folded'
   const isRight = side === 'right'
 
+  const size = 36 // avatar size in px
+  const strokeWidth = 3
+  const radius = (size + strokeWidth * 2) / 2
+  const circumference = 2 * Math.PI * (size / 2)
+  const dashOffset = circumference * (1 - timerProgress)
+
+  // Timer ring color: green > yellow > red
+  const ringColor = timerProgress > 0.5 ? '#96d59b' : timerProgress > 0.2 ? '#e9c349' : '#ef4444'
+
   const avatarEl = (
-    <div className="relative flex-shrink-0">
+    <div className="relative flex-shrink-0" style={{ width: size + strokeWidth * 2, height: size + strokeWidth * 2 }}>
+      {/* Countdown ring (SVG) */}
+      {isCurrentTurn && !isFolded && (
+        <svg
+          className="absolute inset-0"
+          width={size + strokeWidth * 2}
+          height={size + strokeWidth * 2}
+          style={{ transform: 'rotate(-90deg)' }}
+        >
+          {/* Background track */}
+          <circle
+            cx={radius} cy={radius} r={size / 2}
+            fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={strokeWidth}
+          />
+          {/* Progress arc — shrinks over time */}
+          <circle
+            cx={radius} cy={radius} r={size / 2}
+            fill="none" stroke={ringColor} strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            style={{ transition: 'stroke-dashoffset 0.3s linear, stroke 0.3s' }}
+          />
+        </svg>
+      )}
+      {/* Avatar circle */}
       <div
-        className={`w-8 h-8 rounded-full border-2 ${isCurrentTurn ? 'border-[#96d59b] shadow-[0_0_10px_rgba(150,213,155,0.4)]' : 'border-[#414940]'} overflow-hidden flex items-center justify-center text-base`}
-        style={{ backgroundColor: color }}
+        className={`absolute rounded-full border-2 ${!isCurrentTurn ? 'border-[#414940]' : 'border-transparent'} overflow-hidden flex items-center justify-center text-base`}
+        style={{
+          backgroundColor: color,
+          width: size, height: size,
+          top: strokeWidth, left: strokeWidth,
+        }}
       >
         {emoji}
       </div>
       {isDealer && (
-        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white text-black font-bold text-[6px] flex items-center justify-center">D</div>
+        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white text-black font-bold text-[6px] flex items-center justify-center z-10">D</div>
       )}
     </div>
   )
@@ -59,9 +99,6 @@ export function PlayerSeat({
           {player.chips.toLocaleString()}
         </span>
       </div>
-      {isCurrentTurn && !isFolded && (
-        <div className="bg-[#96d59b] text-[#131313] text-[6px] font-black px-1.5 py-0.5 rounded-full uppercase">Thinking</div>
-      )}
     </div>
   )
 

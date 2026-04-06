@@ -363,6 +363,12 @@ export function PokerTable() {
             const leftPct = parseFloat(position.left)
             const side = leftPct > 60 ? 'right' : leftPct < 40 ? 'left' : 'top'
 
+            // Timer progress for this seat
+            const turnTime = (room?.config.turnTime ?? 30) * 1000
+            const seatTimerProgress = (currentTurn === seatIndex && turnDeadline)
+              ? Math.max(0, Math.min(1, (turnDeadline - now) / turnTime))
+              : 0
+
             return (
               <PlayerSeat
                 key={seatIndex}
@@ -371,6 +377,7 @@ export function PokerTable() {
                 cards={cards}
                 bet={hand?.bet ?? 0}
                 isDealer={dealerSeat === seatIndex}
+                timerProgress={seatTimerProgress}
                 side={side}
                 style={{ top: position.top, left: position.left }}
               />
