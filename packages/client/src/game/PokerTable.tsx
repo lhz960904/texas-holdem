@@ -327,9 +327,8 @@ export function PokerTable() {
           {[...seatPositionMap.entries()].map(([seatIndex, position]) => {
             const hand = handsMap.get(seatIndex)
             const bet = hand?.bet ?? 0
-            // DEBUG: show mock chips for all seats to verify layout
-            const displayBet = bet > 0 ? bet : 50
-            // if (bet <= 0) return null
+            if (bet <= 0) return null
+            const displayBet = bet
             const betPos = getBetPosition(position)
             const isAnimating = betAnimations.get(seatIndex) ?? false
             const pTop = parseFloat(position.top)
