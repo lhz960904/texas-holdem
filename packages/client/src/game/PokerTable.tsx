@@ -71,7 +71,7 @@ function getOpponentPositions(
 }
 
 // Self position for bet chip calculation (bottom center, off-table)
-const SELF_POSITION = { top: '90%', left: '50%' }
+const SELF_POSITION = { top: '78%', left: '50%' }
 
 // Calculate bet chip position: lerp from player toward center
 function getBetPosition(playerPos: { top: string; left: string }): { top: string; left: string } {
@@ -112,8 +112,8 @@ export function PokerTable() {
   // Lock landscape
   useEffect(() => {
     try {
-      ;(screen.orientation as any)?.lock?.('landscape').catch(() => {})
-    } catch {}
+      ; (screen.orientation as any)?.lock?.('landscape').catch(() => { })
+    } catch { }
   }, [])
 
   // Timer tick
@@ -241,8 +241,8 @@ export function PokerTable() {
             <div className="absolute inset-0 border-[3px] border-primary/40 rounded-[190px] pointer-events-none z-10" />
             {/* Felt surface */}
             <div className="absolute inset-0 poker-felt">
-              {/* Pot / Winner display — above community cards */}
-              <div className="absolute top-[25%] left-1/2 -translate-x-1/2 z-10">
+              {/* Pot / Winner display — above community cards, highest z */}
+              <div className="absolute top-[25%] left-1/2 -translate-x-1/2 z-30">
                 {settleWinners.length > 0 && winnerPlayer ? (
                   /* Winner banner — replaces POT, no overlay */
                   <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-5 py-2 rounded-full border border-[#e9c349]/40 animate-[winGlow_1.5s_ease-in-out_2]">
@@ -266,7 +266,7 @@ export function PokerTable() {
               </div>
 
               {/* Community cards — always show 5 slots, undealt as face-down */}
-              <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2 z-10">
+              <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1 sm:gap-2 z-20 scale-[0.7] sm:scale-100 origin-center">
                 {Array.from({ length: 5 }).map((_, i) => {
                   const card = communityCards[i] ?? null
                   const isDealt = i < communityCards.length
