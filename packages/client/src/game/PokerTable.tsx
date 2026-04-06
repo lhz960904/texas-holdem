@@ -389,11 +389,33 @@ export function PokerTable() {
       {/* Bottom HUD — single thin row */}
       <div className="flex-shrink-0 bg-[#131313]/95 border-t border-white/10 px-2 sm:px-4 h-[52px] flex items-center">
         <div className="w-full max-w-5xl mx-auto flex items-center gap-2 sm:gap-3">
-          {/* Avatar (tiny) */}
-          <div
-            className="w-8 h-8 rounded-full border-2 border-[#e9c349] flex items-center justify-center text-base flex-shrink-0"
-            style={{ backgroundColor: myColor }}
-          >{myEmoji}</div>
+          {/* Avatar with countdown ring */}
+          {(() => {
+            const avatarSize = 32
+            const sw = 3
+            const r = (avatarSize + sw * 2) / 2
+            const c = 2 * Math.PI * (avatarSize / 2)
+            const turnTime = (room?.config.turnTime ?? 30) * 1000
+            const myTimer = (isMyTurn && turnDeadline) ? Math.max(0, Math.min(1, (turnDeadline - now) / turnTime)) : 0
+            const ringColor = myTimer > 0.5 ? '#96d59b' : myTimer > 0.2 ? '#e9c349' : '#ef4444'
+            return (
+              <div className="relative flex-shrink-0" style={{ width: avatarSize + sw * 2, height: avatarSize + sw * 2 }}>
+                {isMyTurn && (
+                  <svg className="absolute inset-0" width={avatarSize + sw * 2} height={avatarSize + sw * 2} style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx={r} cy={r} r={avatarSize / 2} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={sw} />
+                    <circle cx={r} cy={r} r={avatarSize / 2} fill="none" stroke={ringColor} strokeWidth={sw} strokeLinecap="round"
+                      strokeDasharray={c} strokeDashoffset={c * (1 - myTimer)}
+                      style={{ transition: 'stroke-dashoffset 0.3s linear, stroke 0.3s' }}
+                    />
+                  </svg>
+                )}
+                <div
+                  className={`absolute rounded-full ${!isMyTurn ? 'border-2 border-[#e9c349]' : 'border-2 border-transparent'} flex items-center justify-center text-base overflow-hidden`}
+                  style={{ backgroundColor: myColor, width: avatarSize, height: avatarSize, top: sw, left: sw }}
+                >{myEmoji}</div>
+              </div>
+            )
+          })()}
 
           {/* My cards (small) */}
           {myCards && (
