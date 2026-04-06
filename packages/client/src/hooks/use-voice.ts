@@ -2,9 +2,23 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Room, RoomEvent, Track, type Participant, type RemoteTrackPublication } from 'livekit-client'
 import { useGameStore } from '../stores/game-store'
 
+/** Pre-request mic permission before entering fullscreen game. Call from WaitingRoom. */
+export async function requestMicPermission(): Promise<boolean> {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    stream.getTracks().forEach(t => t.stop())
+    console.log('[Voice] mic permission granted')
+    return true
+  } catch (e) {
+    console.warn('[Voice] mic permission denied:', e)
+    return false
+  }
+}
+
 export function useVoice() {
   const roomRef = useRef<Room | null>(null)
-  const [isMuted, setIsMuted] = useState(true) // start muted
+  const [isMuted, setIsMuted] = useState(true) // mic off by default
+  const [isDeafened, setIsDeafened] = useState(false) // speaker on by default
   const [speakingParticipants, setSpeaking] = useState<Set<string>>(new Set())
   const [connected, setConnected] = useState(false)
   const gameRoom = useGameStore((s) => s.room)
@@ -34,7 +48,6 @@ export function useVoice() {
       const lkRoom = getRoom()
       await lkRoom.connect(data.wsUrl, data.token)
       console.log('[Voice] connected to LiveKit')
-      // Start muted — user can unmute via UI
       await lkRoom.localParticipant.setMicrophoneEnabled(false)
       setIsMuted(true)
       setConnected(true)
@@ -53,17 +66,9 @@ export function useVoice() {
 
   const toggleMute = useCallback(async () => {
     const lkRoom = roomRef.current
-    if (!lkRoom) {
-      console.warn('[Voice] toggleMute: no room')
-      return
-    }
+    if (!lkRoom) return
     const newMuted = !isMuted
     try {
-      // On first unmute, browser needs mic permission — request explicitly
-      if (!newMuted) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        stream.getTracks().forEach(t => t.stop()) // release, LiveKit will create its own
-      }
       await lkRoom.localParticipant.setMicrophoneEnabled(!newMuted)
       setIsMuted(newMuted)
       console.log('[Voice] mic:', newMuted ? 'muted' : 'unmuted')
@@ -71,6 +76,16 @@ export function useVoice() {
       console.warn('[Voice] toggleMute failed:', e)
     }
   }, [isMuted])
+
+  const toggleDeafen = useCallback(() => {
+    const newDeafened = !isDeafened
+    // Mute/unmute all remote audio elements
+    document.querySelectorAll<HTMLAudioElement>('[id^="voice-"]').forEach((el) => {
+      el.muted = newDeafened
+    })
+    setIsDeafened(newDeafened)
+    console.log('[Voice] speaker:', newDeafened ? 'off' : 'on')
+  }, [isDeafened])
 
   // Attach remote audio tracks to DOM for playback
   useEffect(() => {
@@ -81,6 +96,7 @@ export function useVoice() {
       if (pub.kind !== Track.Kind.Audio || !pub.track) return
       const el = pub.track.attach()
       el.id = `voice-${pub.trackSid}`
+      el.muted = isDeafened // respect current deafen state
       document.body.appendChild(el)
       console.log('[Voice] attached remote audio track:', pub.trackSid)
     }
@@ -105,7 +121,6 @@ export function useVoice() {
     return () => {
       lkRoom.off(RoomEvent.TrackSubscribed, attachTrack as any)
       lkRoom.off(RoomEvent.TrackUnsubscribed, detachTrack as any)
-      // Clean up all voice audio elements
       document.querySelectorAll('[id^="voice-"]').forEach((el) => el.remove())
     }
   }, [connected])
@@ -127,5 +142,5 @@ export function useVoice() {
     return () => { disconnect() }
   }, [gameRoom?.id])
 
-  return { connected, isMuted, toggleMute, speakingParticipants, connect, disconnect }
+  return { connected, isMuted, isDeafened, toggleMute, toggleDeafen, speakingParticipants, connect, disconnect }
 }
