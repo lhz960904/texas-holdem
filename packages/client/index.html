@@ -15,7 +15,14 @@
     <title>ALL IN</title>
   </head>
   <body class="overscroll-none">
-    <div id="root"></div>
+    <div id="root">
+      <!-- Inline loading skeleton — visible until React hydrates -->
+      <div id="initial-loader" style="height:100dvh;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+        <div style="font-size:2.5rem">🃏</div>
+        <div style="width:40px;height:40px;border:2px solid rgba(233,195,73,0.3);border-top-color:#e9c349;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {

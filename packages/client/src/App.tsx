@@ -1,9 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { useGameStore } from './stores/game-store'
 import { Login } from './components/Login'
 import { Lobby } from './components/Lobby'
-import { WaitingRoom } from './components/WaitingRoom'
-import { PokerTable } from './game/PokerTable'
+
+const WaitingRoom = lazy(() => import('./components/WaitingRoom').then(m => ({ default: m.WaitingRoom })))
+const PokerTable = lazy(() => import('./game/PokerTable').then(m => ({ default: m.PokerTable })))
+
+function LoadingScreen() {
+  return (
+    <div className="h-dvh bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
+      <div className="text-4xl">🃏</div>
+      <div className="w-10 h-10 border-2 border-[#e9c349]/30 border-t-[#e9c349] rounded-full animate-spin" />
+    </div>
+  )
+}
 
 export function App() {
   const tryReconnect = useGameStore((s) => s.tryReconnect)
@@ -35,9 +45,9 @@ export function App() {
     case 'room-setup':
       return <Lobby />
     case 'waiting':
-      return <WaitingRoom />
+      return <Suspense fallback={<LoadingScreen />}><WaitingRoom /></Suspense>
     case 'game':
-      return <PokerTable />
+      return <Suspense fallback={<LoadingScreen />}><PokerTable /></Suspense>
     default:
       return <Login />
   }
