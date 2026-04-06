@@ -76,41 +76,34 @@ function getOpponentPositions(
 const SELF_POSITION = { top: '110%', left: '50%' }
 
 // Calculate bet chip position: lerp from player toward center
-// Place bet chips right next to the player, offset toward table interior
-// Fixed small offset instead of lerp — avoids overlapping community cards
+// Place bet chips along the player→center vector, at a fixed distance from player
 function getBetPosition(playerPos: { top: string; left: string }): { top: string; left: string } {
-  const pTop = parseFloat(playerPos.top)
-  const pLeft = parseFloat(playerPos.left)
+  const px = parseFloat(playerPos.left)
+  const py = parseFloat(playerPos.top)
+  const cx = 50 // table center X
+  const cy = 48 // table center Y
 
-  // Determine offset direction based on which zone the player is in
-  let dTop = 0
-  let dLeft = 0
+  const dx = cx - px
+  const dy = cy - py
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1
 
-  if (pTop < 30) {
-    // Top row — chips below player
-    dTop = 12
-  } else if (pTop > 60) {
-    // Bottom row — chips above player
-    dTop = -12
-  }
+  const chipDist = 14 // fixed distance in % units
+  const nx = (dx / dist) * chipDist
+  const ny = (dy / dist) * chipDist
 
-  if (pLeft < 30) {
-    // Left side — chips to the right
-    dLeft = 14
-  } else if (pLeft > 70) {
-    // Right side — chips to the left
-    dLeft = -14
-  }
+  let resultTop = py + ny
+  let resultLeft = px + nx
 
-  // If player is at top center, just push chips down
-  if (pLeft >= 30 && pLeft <= 70 && pTop < 30) {
-    dLeft = 0
-    dTop = 12
+  // Clamp: keep chips out of community card zone (top 35%-55%, left 30%-70%)
+  if (resultTop > 32 && resultTop < 58 && resultLeft > 28 && resultLeft < 72) {
+    // Too close to center — push back toward player
+    resultTop = py + ny * 0.5
+    resultLeft = px + nx * 0.5
   }
 
   return {
-    top: `${pTop + dTop}%`,
-    left: `${pLeft + dLeft}%`,
+    top: `${resultTop.toFixed(1)}%`,
+    left: `${resultLeft.toFixed(1)}%`,
   }
 }
 
@@ -334,7 +327,9 @@ export function PokerTable() {
           {[...seatPositionMap.entries()].map(([seatIndex, position]) => {
             const hand = handsMap.get(seatIndex)
             const bet = hand?.bet ?? 0
-            if (bet <= 0) return null
+            // DEBUG: show mock chips for all seats to verify layout
+            const displayBet = bet > 0 ? bet : 50
+            // if (bet <= 0) return null
             const betPos = getBetPosition(position)
             const isAnimating = betAnimations.get(seatIndex) ?? false
             const pTop = parseFloat(position.top)
@@ -348,7 +343,7 @@ export function PokerTable() {
             return (
               <ChipPile
                 key={`bet-${seatIndex}`}
-                amount={bet}
+                amount={displayBet}
                 seatIndex={seatIndex}
                 animate={isAnimating ? 'push-in' : null}
                 pushFrom={pushFrom}
