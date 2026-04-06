@@ -12,7 +12,8 @@
   "dependencies": {
     "@texas-holdem/shared": "workspace:*",
     "livekit-client": "^2.9.4",
-"react": "^19.0.0",
+    "rc-slider": "^11.1.9",
+    "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.3"
   },

@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import Slider from 'rc-slider'
+import 'rc-slider/assets/index.css'
 import { useGameStore } from '../stores/game-store'
 import { SettleOverlay } from '../components/SettleOverlay'
 import { PlayingCard } from './PlayingCard'
@@ -578,13 +580,20 @@ export function PokerTable() {
                   {/* Raise panel — pops up above the button */}
                   {raiseOpen && isMyTurn && (
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#1a1a1a] border border-[#333] rounded-xl p-3 shadow-2xl min-w-[220px] z-50">
-                      {/* Custom touch slider — works in WeChat WebView */}
-                      <CustomSlider
-                        min={effectiveMinRaise}
-                        max={maxRaiseBet}
-                        value={effectiveRaise}
-                        onChange={setRaiseAmount}
-                      />
+                      {/* Slider */}
+                      <div className="px-1 mb-1">
+                        <Slider
+                          min={effectiveMinRaise}
+                          max={maxRaiseBet}
+                          value={effectiveRaise}
+                          onChange={(v) => setRaiseAmount(v as number)}
+                          styles={{
+                            track: { backgroundColor: '#e9c349', height: 4 },
+                            rail: { backgroundColor: 'rgba(255,255,255,0.1)', height: 4 },
+                            handle: { backgroundColor: '#e9c349', borderColor: '#1a1a1a', width: 22, height: 22, marginTop: -9, opacity: 1 },
+                          }}
+                        />
+                      </div>
                       {/* Amount display */}
                       <p className="text-center text-[#e9c349] font-mono font-bold text-sm mb-2">{effectiveRaise.toLocaleString()}</p>
                       {/* Preset buttons */}
@@ -618,55 +627,3 @@ export function PokerTable() {
   )
 }
 
-/** Custom touch-friendly slider that works in WeChat WebView */
-function CustomSlider({ min, max, value, onChange }: { min: number; max: number; value: number; onChange: (v: number) => void }) {
-  const trackRef = useRef<HTMLDivElement>(null)
-
-  const calcValue = (clientX: number) => {
-    const track = trackRef.current
-    if (!track) return
-    const rect = track.getBoundingClientRect()
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    onChange(Math.round(min + ratio * (max - min)))
-  }
-
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    e.preventDefault()
-    calcValue(e.touches[0].clientX)
-  }, [min, max])
-
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault()
-    calcValue(e.touches[0].clientX)
-  }, [min, max])
-
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    calcValue(e.clientX)
-    const onMove = (ev: MouseEvent) => calcValue(ev.clientX)
-    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }, [min, max])
-
-  const pct = max > min ? ((value - min) / (max - min)) * 100 : 0
-
-  return (
-    <div
-      ref={trackRef}
-      className="relative h-6 mb-1 flex items-center cursor-pointer"
-      onMouseDown={onMouseDown}
-    >
-      {/* Track background */}
-      <div className="absolute left-0 right-0 h-1 bg-white/10 rounded-full" />
-      {/* Track fill */}
-      <div className="absolute left-0 h-1 bg-[#e9c349] rounded-full" style={{ width: `${pct}%` }} />
-      {/* Thumb — only this handles touch */}
-      <div
-        className="absolute w-6 h-6 bg-[#e9c349] rounded-full shadow-lg border-2 border-[#1a1a1a] -translate-x-1/2"
-        style={{ left: `${pct}%` }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-      />
-    </div>
-  )
-}
