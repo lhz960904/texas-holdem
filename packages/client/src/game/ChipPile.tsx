@@ -84,7 +84,7 @@ export function ChipPile({ amount, seatIndex, position, pushFrom, animate, colle
 
   return (
     <div
-      className={`absolute -translate-x-1/2 -translate-y-1/2 z-10 ${animationClass}`}
+      className={`absolute -translate-x-1/2 -translate-y-1/2 z-25 ${animationClass}`}
       style={{
         top: position.y,
         left: position.x,

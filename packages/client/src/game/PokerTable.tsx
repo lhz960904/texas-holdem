@@ -79,9 +79,9 @@ const SELF_POSITION = { top: '110%', left: '50%' }
 function getBetPosition(playerPos: { top: string; left: string }): { top: string; left: string } {
   const pTop = parseFloat(playerPos.top) / 100
   const pLeft = parseFloat(playerPos.left) / 100
-  const cTop = 0.42
+  const cTop = 0.45
   const cLeft = 0.50
-  const t = 0.4
+  const t = 0.2 // keep chips close to player
   return {
     top: `${((pTop + (cTop - pTop) * t) * 100).toFixed(1)}%`,
     left: `${((pLeft + (cLeft - pLeft) * t) * 100).toFixed(1)}%`,
