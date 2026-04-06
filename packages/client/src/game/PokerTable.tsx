@@ -217,28 +217,53 @@ export function PokerTable() {
   const myEmoji = myAvatarParts[0] || '👤'
   const myColor = myAvatarParts[1] || '#888888'
 
+  // Winner info for inline display
+  const winnerPlayer = settleWinners.length > 0
+    ? players.find(p => p.seatIndex === settleWinners[0].seatIndex)
+    : null
+  const winnerEmoji = winnerPlayer ? parseAvatar(winnerPlayer.avatar).emoji : ''
+  const winAmount = settleWinners.length > 0 ? settleWinners[0].amount : 0
+
+  function parseAvatar(avatar: string) {
+    const parts = avatar.split(':')
+    return { emoji: parts[0] || '👤', color: parts[1] || '#888' }
+  }
+
   return (
     <div className="fixed inset-0 bg-[#131313] flex flex-col">
-      {/* Table area */}
-      <div className="relative flex-1 flex items-center justify-center p-4 pt-2 pb-0">
-        {/* Table container — rounded racetrack shape */}
-        <div className="relative w-full max-w-5xl" style={{ aspectRatio: '2.2/1' }}>
+      {/* Table area — flex-1 minus HUD height */}
+      <div className="relative flex-1 min-h-0 flex items-center justify-center p-2 sm:p-4">
+        {/* Table container */}
+        <div className="relative w-full max-w-5xl max-h-full" style={{ aspectRatio: '2.2/1' }}>
           {/* Outer border */}
           <div className="absolute inset-0 rounded-[200px] border-[12px] border-[#2a2a2a] shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-hidden">
             {/* Golden inner border */}
             <div className="absolute inset-0 border-[3px] border-primary/40 rounded-[190px] pointer-events-none z-10" />
             {/* Felt surface */}
             <div className="absolute inset-0 poker-felt">
-              {/* Pot display — above community cards */}
-              {pot > 0 && (
-                <div className="absolute top-[30%] left-1/2 -translate-x-1/2 z-10">
-                  <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-5 py-2 rounded-full border border-[#e9c349]/20">
-                    <span className="font-headline font-extrabold text-2xl text-[#e9c349] tracking-tighter">
+              {/* Pot / Winner display — above community cards */}
+              <div className="absolute top-[25%] left-1/2 -translate-x-1/2 z-10">
+                {settleWinners.length > 0 && winnerPlayer ? (
+                  /* Winner banner — replaces POT, no overlay */
+                  <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-5 py-2 rounded-full border border-[#e9c349]/40 animate-[winGlow_1.5s_ease-in-out_2]">
+                    <span className="text-2xl">{winnerEmoji}</span>
+                    <div className="flex flex-col items-start">
+                      <span className="font-headline font-extrabold text-lg text-[#e9c349] leading-tight">
+                        {winnerPlayer.nickname} wins!
+                      </span>
+                      <span className="text-[#96d59b] text-sm font-bold leading-tight">
+                        +{winAmount.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                ) : pot > 0 ? (
+                  <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-5 py-1.5 rounded-full border border-[#e9c349]/20">
+                    <span className="font-headline font-extrabold text-xl text-[#e9c349] tracking-tighter">
                       POT: {pot.toLocaleString()}
                     </span>
                   </div>
-                </div>
-              )}
+                ) : null}
+              </div>
 
               {/* Community cards — always show 5 slots, undealt as face-down */}
               <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2 z-10">
@@ -334,135 +359,98 @@ export function PokerTable() {
         </div>
       </div>
 
-      {/* Bottom HUD */}
-      <div className="bg-[#131313]/90 backdrop-blur-xl border-t border-white/10 px-6 pb-6 pt-3">
-        <div className="max-w-5xl mx-auto flex items-end justify-between gap-6">
-          {/* Left: My avatar + my cards + hand rank */}
-          <div className="flex items-end gap-4">
-            {/* Avatar */}
-            <div className="relative flex-shrink-0">
+      {/* Bottom HUD — compact for mobile */}
+      <div className="flex-shrink-0 bg-[#131313]/90 backdrop-blur-xl border-t border-white/10 px-3 sm:px-6 py-2 sm:pb-4 sm:pt-3">
+        <div className="max-w-5xl mx-auto flex items-center gap-3 sm:gap-6">
+          {/* Left: Avatar + cards */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="relative">
               <div
-                className="w-20 h-20 rounded-full border-4 border-[#e9c349] flex items-center justify-center text-4xl overflow-hidden"
+                className="w-10 h-10 sm:w-16 sm:h-16 rounded-full border-2 sm:border-3 border-[#e9c349] flex items-center justify-center text-xl sm:text-3xl"
                 style={{ backgroundColor: myColor }}
               >
                 {myEmoji}
               </div>
-              <div className="absolute -top-1 -right-1 bg-[#e9c349] text-[#131313] text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase">
-                YOU
-              </div>
               {dealerSeat === mySeatIndex && (
-                <div className="absolute -bottom-1 -left-1 w-6 h-6 rounded-full bg-white text-black font-bold text-[10px] flex items-center justify-center">
-                  D
-                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white text-black font-bold text-[7px] sm:text-[9px] flex items-center justify-center">D</div>
               )}
             </div>
-
-            {/* My cards */}
             {myCards && (
-              <div className="flex items-end -ml-2">
-                <div style={{ transform: 'rotate(-5deg)' }} className="hover:-translate-y-2 transition-transform">
-                  <PlayingCard card={myCards[0]} large />
-                </div>
-                <div style={{ transform: 'rotate(5deg)' }} className="-ml-6 hover:-translate-y-2 transition-transform">
-                  <PlayingCard card={myCards[1]} large />
-                </div>
+              <div className="flex -space-x-3">
+                <div style={{ transform: 'rotate(-4deg)' }}><PlayingCard card={myCards[0]} /></div>
+                <div style={{ transform: 'rotate(4deg)' }}><PlayingCard card={myCards[1]} /></div>
               </div>
             )}
-
-            {/* Chips display */}
-            <div className="pb-2">
-              <div className="text-[10px] text-white/50 uppercase tracking-tight">{me?.nickname}</div>
-              <div className="font-headline font-bold text-[#e9c349] text-lg">
-                {myChips.toLocaleString()}
-              </div>
+            <div className="hidden sm:block">
+              <div className="text-[9px] text-white/40 uppercase">{me?.nickname}</div>
+              <div className="font-headline font-bold text-[#e9c349] text-sm">{myChips.toLocaleString()}</div>
             </div>
+            <div className="sm:hidden font-headline font-bold text-[#e9c349] text-xs">{myChips.toLocaleString()}</div>
           </div>
 
-          {/* Center: Action buttons */}
-          <div className="flex gap-2 items-end pb-2">
+          {/* Center: Action buttons — compact */}
+          <div className="flex gap-1.5 sm:gap-2 items-center flex-1 justify-center">
             <button
               onClick={() => sendAction('fold')}
               disabled={!isMyTurn}
-              className="h-14 px-6 rounded-xl bg-[#2a2a2a] text-[#e5e2e1] font-headline font-extrabold text-lg uppercase hover:bg-[#3a3a3a] transition-colors disabled:opacity-30"
-            >
-              Fold
-            </button>
+              className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl bg-[#2a2a2a] text-[#e5e2e1] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
+            >Fold</button>
 
             {canCheck ? (
               <button
                 onClick={() => sendAction('check')}
                 disabled={!isMyTurn}
-                className="h-14 px-6 rounded-xl border-2 border-[#96d59b] text-[#96d59b] font-headline font-extrabold text-lg uppercase hover:bg-[#96d59b]/10 transition-colors disabled:opacity-30"
-              >
-                Check
-              </button>
+                className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl border border-[#96d59b] text-[#96d59b] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
+              >Check</button>
             ) : callAmount > 0 ? (
               <button
                 onClick={() => sendAction('call')}
                 disabled={!isMyTurn}
-                className="h-14 px-6 rounded-xl border-2 border-[#96d59b] text-[#96d59b] font-headline font-extrabold text-lg uppercase hover:bg-[#96d59b]/10 transition-colors disabled:opacity-30"
-              >
-                <span className="block leading-tight">Call</span>
-                <span className="block text-xs opacity-80">{callAmount.toLocaleString()}</span>
-              </button>
+                className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl border border-[#96d59b] text-[#96d59b] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
+              >Call {callAmount > 0 && <span className="text-[10px] ml-0.5 opacity-70">{callAmount}</span>}</button>
             ) : null}
 
             <button
               onClick={handleRaise}
               disabled={!isMyTurn || myChips <= callAmount}
-              className="h-14 px-6 rounded-xl bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-extrabold text-lg uppercase hover:opacity-90 transition-opacity disabled:opacity-30"
-            >
-              <span className="block leading-tight">Raise</span>
-              <span className="block text-xs opacity-80">{effectiveRaise.toLocaleString()}</span>
-            </button>
+              className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl bg-gradient-to-b from-[#e9c349] to-[#c4a033] text-[#131313] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
+            >Raise {effectiveRaise > 0 && <span className="text-[10px] ml-0.5 opacity-70">{effectiveRaise}</span>}</button>
 
             <button
               onClick={handleAllIn}
               disabled={!isMyTurn}
-              className="h-14 px-6 rounded-xl border-2 border-[#e9c349] text-[#e9c349] font-headline font-extrabold text-lg uppercase hover:bg-[#e9c349]/10 transition-colors disabled:opacity-30"
-            >
-              <span className="block leading-tight">All In</span>
-              <span className="block text-xs opacity-80">{myChips.toLocaleString()}</span>
-            </button>
+              className="h-9 sm:h-12 px-3 sm:px-5 rounded-lg sm:rounded-xl border border-[#e9c349] text-[#e9c349] font-headline font-bold text-xs sm:text-sm uppercase disabled:opacity-30"
+            >All In</button>
           </div>
 
-          {/* Right: Raise slider */}
+          {/* Right: Raise slider (hidden on small screens) */}
           {isMyTurn && (
-            <div className="flex flex-col gap-2 min-w-[160px] pb-2">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-white/70">Raise</span>
-                <span className="text-[#e9c349] font-headline font-bold">{effectiveRaise.toLocaleString()}</span>
-              </div>
+            <div className="hidden sm:flex flex-col gap-1 min-w-[120px] flex-shrink-0">
               <input
                 type="range"
                 min={effectiveMinRaise}
                 max={myChips}
                 value={effectiveRaise}
                 onChange={(e) => setRaiseAmount(Number(e.target.value))}
-                className="w-full accent-[#e9c349] h-2 rounded-full"
+                className="w-full accent-[#e9c349] h-1.5 rounded-full"
               />
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 {[
-                  { label: '½ Pot', value: halfPot },
+                  { label: '½', value: halfPot },
                   { label: 'Pot', value: fullPot },
                   { label: 'Max', value: myChips },
                 ].map(({ label, value }) => (
                   <button
                     key={label}
                     onClick={() => setRaiseAmount(value)}
-                    className="flex-1 py-1 text-[10px] font-bold rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors uppercase"
-                  >
-                    {label}
-                  </button>
+                    className="flex-1 py-0.5 text-[8px] font-bold rounded bg-white/10 text-white/60 uppercase"
+                  >{label}</button>
                 ))}
               </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Settle overlay */}
-      {settleWinners.length > 0 && <SettleOverlay />}
     </div>
   )
 }
