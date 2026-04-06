@@ -5,7 +5,6 @@ import { SettleOverlay } from '../components/SettleOverlay'
 import { PlayingCard } from './PlayingCard'
 import { PlayerSeat } from './PlayerSeat'
 import { ChipPile } from './ChipPile'
-import { PotChips } from './PotChips'
 import type { Card } from '@texas-holdem/shared'
 
 // Seat positions as CSS percentages, indexed by player count
@@ -259,27 +258,14 @@ export function PokerTable() {
           />
         </div>
 
-        {/* Pot display — scattered chips visualization */}
+        {/* Pot display — number only */}
         {pot > 0 && (
           <div className="absolute top-[28%] left-1/2 -translate-x-1/2 z-10">
-            <PotChips
-              amount={pot}
-              collecting={
-                potCollecting
-                  ? (() => {
-                      const winnerSeat = seatMap.find((s) => s.seatIndex === potCollecting.seatIndex)
-                      if (!winnerSeat) return null
-                      // Calculate offset from pot center to winner position
-                      const wTop = parseFloat(winnerSeat.position.top)
-                      const wLeft = parseFloat(winnerSeat.position.left)
-                      return {
-                        targetX: `${wLeft - 50}vw`,
-                        targetY: `${(wTop - 28) * 0.75}vh`,
-                      }
-                    })()
-                  : null
-              }
-            />
+            <div className="px-4 py-1.5 rounded-full bg-black/60 border border-yellow-500/30 backdrop-blur-sm">
+              <span className="text-yellow-400 text-sm font-bold tracking-wide">
+                POT {pot.toLocaleString()}
+              </span>
+            </div>
           </div>
         )}
 
