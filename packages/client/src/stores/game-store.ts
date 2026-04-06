@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Card, GamePhase, PlayerHandState, RoomState } from '@texas-holdem/shared'
 import type { ShowdownResult, SettleWinner } from '@texas-holdem/shared'
 import { WsClient } from '../lib/ws-client'
+import { sounds } from '../lib/sounds'
 
 export type Screen = 'lobby' | 'room-setup' | 'waiting' | 'game'
 
@@ -178,10 +179,12 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     })
 
     wsClient.on('deal-cards', ({ cards }) => {
+      sounds.play('deal')
       set({ myCards: cards })
     })
 
     wsClient.on('phase-change', ({ phase, communityCards }) => {
+      sounds.play('flip')
       set((state) => {
         if (!state.room?.game) return {}
         // Reset all bets to 0 on phase change (collectBets was called)
@@ -201,6 +204,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     })
 
     wsClient.on('turn', ({ seatIndex, deadline, minRaise, currentBet, hands: turnHands }) => {
+      // Play turn alert if it's my turn
+      const mySeat = get().room?.players.find((p) => p.id === get().playerId)?.seatIndex
+      if (mySeat !== undefined && seatIndex === mySeat) {
+        sounds.play('turnAlert')
+      }
       set((state) => {
         const updates: any = {
           currentTurn: seatIndex,
@@ -222,7 +230,15 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       })
     })
 
-    wsClient.on('player-action', ({ pot }) => {
+    wsClient.on('player-action', ({ type, pot }) => {
+      if (type === 'fold') {
+        sounds.play('fold')
+      } else if (type === 'check') {
+        sounds.play('check')
+      } else {
+        // call, raise, allIn
+        sounds.play('chips')
+      }
       set((state) => {
         if (!state.room?.game) return {}
         return {
@@ -239,6 +255,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     })
 
     wsClient.on('settle', ({ winners, showCards }) => {
+      sounds.play('win')
       set({ settleWinners: winners, settleShowCards: showCards })
     })
 
@@ -259,6 +276,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       }
     })
 
+    sounds.preload()
     wsClient.connect()
     set({ wsClient, playerId, connected: true })
   },

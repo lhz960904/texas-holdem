@@ -78,6 +78,78 @@ function getRotatedPositions(
   }))
 }
 
+// Chip denomination definitions for stacked chip visualization
+const CHIP_DENOMINATIONS = [
+  { value: 1000, color: 'linear-gradient(135deg, #ffd700, #ff8c00)', borderColor: 'rgba(255,255,255,0.5)', textColor: '#000' },
+  { value: 100, color: '#2c3e50', borderColor: 'rgba(255,255,255,0.4)', textColor: '#fff' },
+  { value: 25, color: '#27ae60', borderColor: 'rgba(255,255,255,0.4)', textColor: '#fff' },
+  { value: 5, color: '#c0392b', borderColor: 'rgba(255,255,255,0.4)', textColor: '#fff' },
+]
+
+interface ChipInfo {
+  color: string
+  borderColor: string
+  textColor: string
+  value: number
+}
+
+function ChipStack({ amount }: { amount: number }) {
+  const chips: ChipInfo[] = []
+  let remaining = amount
+
+  for (const d of CHIP_DENOMINATIONS) {
+    const count = Math.min(Math.floor(remaining / d.value), 3) // max 3 per denomination
+    for (let i = 0; i < count; i++) {
+      chips.push({ color: d.color, borderColor: d.borderColor, textColor: d.textColor, value: d.value })
+    }
+    remaining -= count * d.value
+  }
+
+  // Ensure at least one chip visual if amount > 0
+  if (chips.length === 0 && amount > 0) {
+    const last = CHIP_DENOMINATIONS[CHIP_DENOMINATIONS.length - 1]
+    chips.push({ color: last.color, borderColor: last.borderColor, textColor: last.textColor, value: last.value })
+  }
+
+  return (
+    <div className="flex flex-col items-center" style={{ animation: 'chipSlide 0.4s ease-out' }}>
+      {/* Stacked chips */}
+      <div className="relative" style={{ height: `${Math.max(28, chips.length * 3 + 25)}px`, width: '28px' }}>
+        {chips.map((chip, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: '28px',
+              height: '28px',
+              bottom: `${i * 3}px`,
+              background: chip.color,
+              border: `2px dashed ${chip.borderColor}`,
+              boxShadow: `
+                0 2px 0 rgba(0,0,0,0.3),
+                0 3px 0 rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.2)
+              `,
+            }}
+          />
+        ))}
+      </div>
+      {/* Amount text below */}
+      <div
+        className="text-xs font-bold mt-1 px-2 py-0.5 rounded-full"
+        style={{
+          color: '#ffd700',
+          textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          border: '1px solid rgba(255,215,0,0.3)',
+        }}
+      >
+        {amount.toLocaleString()}
+      </div>
+    </div>
+  )
+}
+
 export function PokerTable() {
   const room = useGameStore((s) => s.room)
   const myCards = useGameStore((s) => s.myCards)
@@ -150,12 +222,15 @@ export function PokerTable() {
 
   return (
     <div
-      className="fixed inset-0 bg-[#0d1f15] flex flex-col"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      className="fixed inset-0 flex flex-col"
+      style={{
+        backgroundColor: '#080f08',
+        paddingTop: 'env(safe-area-inset-top)',
+      }}
     >
       {/* Table area */}
       <div className="relative flex-1" style={{ height: '75%' }}>
-        {/* Green felt table */}
+        {/* Premium emerald green felt table */}
         <div
           className="absolute"
           style={{
@@ -163,45 +238,89 @@ export function PokerTable() {
             left: '8%',
             right: '8%',
             bottom: '4%',
-            background: 'radial-gradient(ellipse, #2a7a4a 0%, #1a5a32 60%, #124a28 100%)',
+            background: `
+              radial-gradient(ellipse at center, rgba(255,255,255,0.06) 0%, transparent 60%),
+              radial-gradient(ellipse at center, #1e6b3a 0%, #145228 50%, #0d3a1c 100%)
+            `,
             borderRadius: '50%',
-            border: '4px solid #8b7355',
-            boxShadow: '0 0 0 8px rgba(60,40,20,0.6), 0 0 40px rgba(0,0,0,0.5)',
+            border: '10px solid #3a2510',
+            boxShadow: 'inset 0 0 80px rgba(0,0,0,0.4), 0 0 0 4px #2a1a08, 0 0 60px rgba(0,0,0,0.6)',
           }}
-        />
+        >
+          {/* Inner decorative ring */}
+          <div
+            className="absolute inset-3 rounded-[50%] pointer-events-none"
+            style={{
+              border: '1.5px solid rgba(255,255,255,0.06)',
+            }}
+          />
+          {/* Subtle felt noise texture */}
+          <div
+            className="absolute inset-0 rounded-[50%] pointer-events-none"
+            style={{
+              backgroundImage: `
+                repeating-linear-gradient(
+                  0deg,
+                  rgba(255,255,255,0.015),
+                  rgba(255,255,255,0.015) 1px,
+                  transparent 1px,
+                  transparent 3px
+                ),
+                repeating-linear-gradient(
+                  90deg,
+                  rgba(255,255,255,0.015),
+                  rgba(255,255,255,0.015) 1px,
+                  transparent 1px,
+                  transparent 3px
+                )
+              `,
+              opacity: 0.03,
+            }}
+          />
+        </div>
 
-        {/* Pot display */}
+        {/* Pot display — stacked chips visualization */}
         {pot > 0 && (
-          <div className="absolute top-[32%] left-1/2 -translate-x-1/2 z-10">
-            <div className="px-3 py-1 rounded-full bg-black/50 border border-yellow-500/30">
-              <span className="text-yellow-400 text-xs font-bold">
-                底池 {pot.toLocaleString()}
-              </span>
-            </div>
+          <div className="absolute top-[28%] left-1/2 -translate-x-1/2 z-10">
+            <ChipStack amount={pot} />
           </div>
         )}
 
-        {/* Community cards */}
+        {/* Community cards with staggered deal animation */}
         <div className="absolute top-[42%] left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
           {Array.from({ length: 5 }).map((_, i) => {
             const card = communityCards[i] ?? null
             const isDealt = i < communityCards.length
             return (
-              <div key={i} style={isDealt ? { animation: 'dealCard 0.3s ease-out' } : undefined}>
+              <div key={i}>
                 {isDealt ? (
-                  <PlayingCard card={card} />
+                  <PlayingCard card={card} animationDelay={i * 80} />
                 ) : (
-                  <div className="w-9 h-13 rounded-md border border-white/10 bg-white/5" />
+                  <div
+                    className="w-11 h-16 rounded-[6px]"
+                    style={{
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'rgba(255,255,255,0.03)',
+                    }}
+                  />
                 )}
               </div>
             )
           })}
         </div>
 
-        {/* Phase indicator */}
+        {/* Phase indicator — small, translucent, uppercase tracking */}
         {phase && phase !== 'waiting' && (
-          <div className="absolute top-[56%] left-1/2 -translate-x-1/2 z-10">
-            <span className="text-white/40 text-[10px] uppercase tracking-wider">{phase}</span>
+          <div className="absolute top-[58%] left-1/2 -translate-x-1/2 z-10">
+            <span
+              className="text-[10px] uppercase font-medium"
+              style={{
+                color: 'rgba(255,255,255,0.35)',
+                letterSpacing: '0.15em',
+              }}
+            >
+              {phase}
+            </span>
           </div>
         )}
 
@@ -235,14 +354,6 @@ export function PokerTable() {
 
       {/* Settle overlay */}
       {settleWinners.length > 0 && <SettleOverlay />}
-
-      {/* Global keyframes */}
-      <style>{`
-        @keyframes dealCard {
-          from { transform: translateY(-100px) scale(0.5); opacity: 0; }
-          to { transform: translateY(0) scale(1); opacity: 1; }
-        }
-      `}</style>
     </div>
   )
 }

@@ -21,3 +21,23 @@ html, body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
+
+@keyframes dealIn {
+  from { transform: translateY(-30px) scale(0.7); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes chipSlide {
+  from { transform: translateY(20px) scale(0.5); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes winGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+  50% { box-shadow: 0 0 40px rgba(255,215,0,0.6), 0 0 80px rgba(255,215,0,0.2); }
+}
+
+@keyframes pulseRing {
+  0%, 100% { box-shadow: 0 0 0 3px #ffd700, 0 0 15px rgba(255,215,0,0.3); }
+  50% { box-shadow: 0 0 0 3px #ffd700, 0 0 25px rgba(255,215,0,0.5); }
+}
