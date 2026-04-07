@@ -25,4 +25,4 @@ ENV NODE_ENV=production
 ENV PORT=3001
 
 # Run server with tsx (handles TS + ESM correctly)
-CMD ["sh", "-c", "echo 'Starting server...' && ls -la /app/packages/server/data/ 2>/dev/null; echo 'Node:' $(node -v); exec pnpm --filter @texas-holdem/server start"]
+CMD ["pnpm", "--filter", "@texas-holdem/server", "start"]
