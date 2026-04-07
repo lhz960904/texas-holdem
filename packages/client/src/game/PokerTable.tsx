@@ -133,19 +133,20 @@ export function PokerTable() {
   const betAnimTimeouts = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
   const [raiseAmount, setRaiseAmount] = useState(minRaise)
 
-  // Request fullscreen + lock landscape on mobile only (skip in PWA mode)
+  // Lock landscape on mobile, request fullscreen only in regular browser (not PWA)
   useEffect(() => {
     const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     if (!isMobile) return
 
+    // Try landscape lock (works in both PWA and browser)
+    try { ;(screen.orientation as any)?.lock?.('landscape').catch(() => {}) } catch {}
+
+    // Detect PWA / standalone / fullscreen mode — skip fullscreen API if so
     const isPWA = window.matchMedia('(display-mode: standalone)').matches
       || window.matchMedia('(display-mode: fullscreen)').matches
       || (navigator as any).standalone === true
-    if (isPWA) {
-      // Already fullscreen in PWA, just try landscape lock
-      try { ;(screen.orientation as any)?.lock?.('landscape').catch(() => {}) } catch {}
-      return
-    }
+      || !window.menubar?.visible // fallback: no browser chrome = PWA-like
+    if (isPWA) return
 
     const el = document.documentElement
     const requestFS = el.requestFullscreen
@@ -154,9 +155,6 @@ export function PokerTable() {
     if (requestFS && !document.fullscreenElement) {
       requestFS.call(el).catch(() => {})
     }
-    try {
-      ;(screen.orientation as any)?.lock?.('landscape').catch(() => {})
-    } catch {}
     const onTap = () => {
       if (!document.fullscreenElement) {
         const r = el.requestFullscreen ?? (el as any).webkitRequestFullscreen
