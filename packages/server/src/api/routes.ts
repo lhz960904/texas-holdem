@@ -46,10 +46,10 @@ export function createApi(roomManager: RoomManager, userRepo: UserRepository) {
   }
 
   // --- Get current user profile ---
-  app.get('/api/auth/me', (c) => {
+  app.get('/api/auth/me', async (c) => {
     const payload = getUserFromToken(c)
     if (!payload) return c.json({ error: 'Unauthorized' }, 401)
-    const user = userRepo.findById(payload.userId)
+    const user = await userRepo.findById(payload.userId)
     if (!user) return c.json({ error: 'User not found' }, 404)
     return c.json({ user })
   })
@@ -59,7 +59,7 @@ export function createApi(roomManager: RoomManager, userRepo: UserRepository) {
     const payload = getUserFromToken(c)
     if (!payload) return c.json({ error: 'Unauthorized' }, 401)
     const { avatar } = await c.req.json<{ avatar: string }>()
-    userRepo.updateAvatar(payload.userId, avatar)
+    await userRepo.updateAvatar(payload.userId, avatar)
     return c.json({ ok: true })
   })
 
@@ -75,7 +75,7 @@ export function createApi(roomManager: RoomManager, userRepo: UserRepository) {
       return c.json({ error: 'config is required' }, 400)
     }
 
-    const user = userRepo.findById(payload.userId)
+    const user = await userRepo.findById(payload.userId)
     if (!user) return c.json({ error: 'User not found' }, 404)
 
     const room = roomManager.createRoom(user.id, config)

@@ -1,31 +1,28 @@
-import Database from 'better-sqlite3'
-import { resolve } from 'path'
+import postgres from 'postgres'
 
-const DB_PATH = resolve(process.cwd(), 'data', 'poker.db')
+const DATABASE_URL = process.env.DATABASE_URL
+if (!DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required')
+}
 
-// Ensure data directory exists
-import { mkdirSync } from 'fs'
-mkdirSync(resolve(process.cwd(), 'data'), { recursive: true })
+const sql = postgres(DATABASE_URL)
 
-import type BetterSqlite3 from 'better-sqlite3'
-const db: BetterSqlite3.Database = new Database(DB_PATH)
+// Create tables on startup
+export async function initDb() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      nickname TEXT NOT NULL,
+      avatar TEXT NOT NULL DEFAULT '',
+      chips_balance INTEGER NOT NULL DEFAULT 50000,
+      games_played INTEGER NOT NULL DEFAULT 0,
+      games_won INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  console.log('[DB] PostgreSQL connected and tables initialized')
+}
 
-// Enable WAL mode for better concurrent read performance
-db.pragma('journal_mode = WAL')
-
-// Create tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    nickname TEXT NOT NULL,
-    avatar TEXT NOT NULL DEFAULT '',
-    chips_balance INTEGER NOT NULL DEFAULT 50000,
-    games_played INTEGER NOT NULL DEFAULT 0,
-    games_won INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )
-`)
-
-export default db
+export default sql

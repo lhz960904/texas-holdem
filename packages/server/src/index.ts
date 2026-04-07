@@ -4,8 +4,11 @@ import { createApi } from './api/routes'
 import { RoomManager } from './rooms/room-manager'
 import { WsHandler } from './ws/ws-handler'
 import { UserRepository } from './db/user-repository'
+import { initDb } from './db/index'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
+
+await initDb()
 
 const userRepo = new UserRepository()
 const roomManager = new RoomManager()

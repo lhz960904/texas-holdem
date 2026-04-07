@@ -108,7 +108,7 @@ export class WsHandler {
   }
 
   // --- Room Join ---
-  private onJoinRoom(ws: WebSocket, conn: PlayerConnection, data: ClientEvents['join-room']): void {
+  private async onJoinRoom(ws: WebSocket, conn: PlayerConnection, data: ClientEvents['join-room']): Promise<void> {
     try {
       const { code, nickname, avatar } = data
 
@@ -136,7 +136,7 @@ export class WsHandler {
 
       // Check balance for new joins
       if (!isAlreadyInRoom && !this.aiManager.isAI(conn.playerId)) {
-        const user = this.userRepo.findById(conn.playerId)
+        const user = await this.userRepo.findById(conn.playerId)
         if (user && user.chips_balance <= 0) {
           this.send(ws, 'error', { message: '余额不足，无法加入游戏' })
           return
@@ -147,7 +147,7 @@ export class WsHandler {
 
       // Always sync chips from DB for real users (covers both new join and host reconnect)
       if (!this.aiManager.isAI(conn.playerId)) {
-        const user = this.userRepo.findById(conn.playerId)
+        const user = await this.userRepo.findById(conn.playerId)
         if (user && player.chips === 0) {
           player.chips = user.chips_balance
         }
@@ -602,7 +602,7 @@ export class WsHandler {
   }
 
   private returnToWaiting(roomId: string, room: any, engine: any): void {
-    setTimeout(() => {
+    setTimeout(async () => {
       const currentRoom = this.roomManager.getRoom(roomId)
       if (!currentRoom) return
 
@@ -616,10 +616,10 @@ export class WsHandler {
 
         if (!this.aiManager.isAI(p.id)) {
           // Write current chips directly as the user's balance
-          this.userRepo.updateChips(p.id, p.chips)
-          this.userRepo.incrementGames(p.id)
+          await this.userRepo.updateChips(p.id, p.chips)
+          await this.userRepo.incrementGames(p.id)
           if (p.chips > prevChips) {
-            this.userRepo.incrementWins(p.id)
+            await this.userRepo.incrementWins(p.id)
           }
           console.log(`[Chips] ${p.nickname}: ${prevChips} → ${p.chips}`)
         }
